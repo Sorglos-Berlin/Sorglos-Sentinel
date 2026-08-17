@@ -5,9 +5,17 @@ from __future__ import annotations
 import csv
 import html
 import json
+import re
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from .models import ScanResult
+
+REPORT_FILENAME = re.compile(
+    r"^(scan-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}|statistikbericht-[0-9a-f]{8})"
+    r"\.(json|csv|html)$"
+)
 
 RISK_COLORS = {
     "Nicht bewertet": "#8e8e93",
@@ -191,6 +199,36 @@ input{{width:100%;padding:12px;border:1px solid #8e8e9355;border-radius:10px;bac
 </body></html>"""
     path.write_text(document, encoding="utf-8")
     return path
+
+
+def list_reports(output_dir: str) -> list[dict[str, Any]]:
+    """List previously exported report files for the local dashboard."""
+    directory = Path(output_dir)
+    if not directory.exists():
+        return []
+    reports = []
+    for path in directory.iterdir():
+        if path.is_file() and REPORT_FILENAME.fullmatch(path.name):
+            stat = path.stat()
+            reports.append({
+                "name": path.name,
+                "format": path.suffix.lstrip("."),
+                "size": stat.st_size,
+                "modified": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+            })
+    reports.sort(key=lambda item: item["modified"], reverse=True)
+    return reports
+
+
+def resolve_report_path(output_dir: str, filename: str) -> Path | None:
+    """Resolve a report filename to a path strictly inside output_dir, or None."""
+    if not REPORT_FILENAME.fullmatch(filename):
+        return None
+    directory = Path(output_dir).resolve()
+    target = (directory / filename).resolve()
+    if target.parent != directory or not target.is_file():
+        return None
+    return target
 
 
 def export_reports(result: ScanResult, formats: list[str], output_dir: str) -> list[Path]:

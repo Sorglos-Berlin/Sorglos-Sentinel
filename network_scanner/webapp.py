@@ -13,13 +13,13 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from .config import Config, detect_local_ipv4, save_persisted_config
 from .engine import run_scan
 from .history import history_statistics, load_history, load_scan, purge_history, save_history
 from .models import ScanResult
-from .reporters import export_reports, export_statistics_html
+from .reporters import export_reports, export_statistics_html, list_reports, resolve_report_path
 from .version import get_build_info
 
 WEB_ROOT = Path(__file__).with_name("web")
@@ -161,6 +161,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._json(payload if payload else {"error": "Scan nicht gefunden."},
                        HTTPStatus.OK if payload else HTTPStatus.NOT_FOUND)
             return
+        if path == "/api/reports":
+            self._json({"reports": list_reports(self.state.config.output_dir)})
+            return
+        if path.startswith("/api/reports/"):
+            self._serve_report(unquote(path[len("/api/reports/"):]), parsed_request.query)
+            return
         static = {"": "index.html", "/": "index.html",
                   "/app.js": "app.js", "/styles.css": "styles.css",
                   "/logo.png": "assets/sorglos-sentinel-logo-dark.png",
@@ -194,6 +200,37 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
+    def _serve_report(self, filename: str, query: str) -> None:
+        target = resolve_report_path(self.state.config.output_dir, filename)
+        if target is None:
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+        try:
+            payload = target.read_bytes()
+        except OSError:
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+        suffix = target.suffix.lstrip(".")
+        content_type = {"html": "text/html; charset=utf-8",
+                        "json": "application/json; charset=utf-8",
+                        "csv": "text/csv; charset=utf-8"}[suffix]
+        force_download = parse_qs(query).get("download", ["0"])[0] == "1"
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        disposition = "attachment" if (force_download or suffix != "html") else "inline"
+        self.send_header("Content-Disposition", f'{disposition}; filename="{target.name}"')
+        if suffix == "html":
+            self.send_header("Content-Security-Policy", "default-src 'self'; "
+                             "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; "
+                             "img-src 'self' data:; object-src 'none'; frame-ancestors 'none'; "
+                             "base-uri 'none'; form-action 'self'")
+        self.end_headers()
+        self.wfile.write(payload)
+
     def do_POST(self) -> None:  # noqa: N802
         if not self._allowed_host() or not self._authorized_post():
             self._json({"error": "Ungültige lokale Sitzung."}, HTTPStatus.FORBIDDEN)
@@ -214,6 +251,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._json({"error": "Der angeforderte lokale Endpunkt wurde nicht gefunden."}, HTTPStatus.NOT_FOUND)
         except (ValueError, TypeError, json.JSONDecodeError) as exc:
             self._json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+        except OSError as exc:
+            self._json(
+                {"error": f"Zugriff auf den lokalen Datenordner fehlgeschlagen: {exc}"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
 
     def _start_scan(self, data: dict[str, Any]) -> None:
         if data.get("authorized") is not True:

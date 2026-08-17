@@ -22,7 +22,8 @@ from network_scanner.history import (
 from network_scanner.models import Device, Finding, ScanResult
 from network_scanner.oui import OuiDatabase
 from network_scanner.reporters import (
-    export_csv, export_html, export_json, export_statistics_html,
+    export_csv, export_html, export_json, export_reports, export_statistics_html,
+    list_reports, resolve_report_path,
 )
 from network_scanner.scanners import (
     enrich_devices, expand_targets, parse_neighbor_cache, resolve_hostname,
@@ -389,6 +390,26 @@ class ReporterTests(unittest.TestCase):
             path = export_statistics_html(statistics, Path(directory) / "stats.html")
             self.assertIn("&lt;private&gt;", path.read_text(encoding="utf-8"))
 
+    def test_list_reports_only_matches_known_export_names(self):
+        with tempfile.TemporaryDirectory() as directory:
+            export_reports(self.result, ["html", "json", "csv"], directory)
+            (Path(directory) / "settings.json").write_text("{}")
+            (Path(directory) / "not-a-report.html").write_text("<html></html>")
+            reports = list_reports(directory)
+            names = {item["name"] for item in reports}
+            self.assertEqual(len(reports), 3)
+            self.assertTrue(all(name.startswith("scan-") for name in names))
+            self.assertTrue(all(item["size"] > 0 for item in reports))
+
+    def test_resolve_report_path_rejects_traversal_and_unknown_names(self):
+        with tempfile.TemporaryDirectory() as directory:
+            export_reports(self.result, ["json"], directory)
+            name = list_reports(directory)[0]["name"]
+            self.assertIsNotNone(resolve_report_path(directory, name))
+            self.assertIsNone(resolve_report_path(directory, "../settings.json"))
+            self.assertIsNone(resolve_report_path(directory, "settings.json"))
+            self.assertIsNone(resolve_report_path(directory, "does-not-exist.json"))
+
 
 class HistoryTests(unittest.TestCase):
     def result(self, started: str, risk: int = 20) -> ScanResult:
@@ -515,6 +536,23 @@ class LocalApiSecurityTests(unittest.TestCase):
             threading.Event().wait(0.01)
         scan_worker.assert_called_once()
 
+    @patch("network_scanner.webapp.save_persisted_config")
+    def test_unwritable_data_folder_returns_clean_json_error(self, save_config):
+        save_config.side_effect = PermissionError("Zugriff verweigert")
+        payload = json.dumps({"subnet": "192.168.1.0/24", "timeout": 2.0}).encode("utf-8")
+        request = urllib.request.Request(
+            self.base + "/api/settings", data=payload, method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "X-Sorglos-Sentinel-Token": self.state.session_token,
+            },
+        )
+        with self.assertRaises(urllib.error.HTTPError) as context:
+            urllib.request.urlopen(request)
+        self.assertEqual(context.exception.code, 500)
+        body = json.load(context.exception)
+        self.assertIn("Datenordner", body["error"])
+
     def test_dns_rebinding_host_is_rejected(self):
         request = urllib.request.Request(
             self.base + "/api/status", headers={"Host": "attacker.example"}
@@ -522,6 +560,65 @@ class LocalApiSecurityTests(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError) as context:
             urllib.request.urlopen(request)
         self.assertEqual(context.exception.code, 403)
+
+    def test_purge_history_requires_confirmation_and_deletes_only_history(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.state.config = self.state.config.merge({"output_dir": directory})
+            result = ScanResult("192.0.2.0/24", "2026-01-01T00:00:00+00:00",
+                                "2026-01-01T00:00:01+00:00",
+                                devices=[Device("192.0.2.1")])
+            save_history(result, directory)
+            export_reports(result, ["json"], directory)
+
+            missing_confirmation = urllib.request.Request(
+                self.base + "/api/history/purge", data=b"{}", method="POST",
+                headers={"Content-Type": "application/json",
+                        "X-Sorglos-Sentinel-Token": self.state.session_token},
+            )
+            with self.assertRaises(urllib.error.HTTPError) as context:
+                urllib.request.urlopen(missing_confirmation)
+            self.assertEqual(context.exception.code, 400)
+            self.assertEqual(len(load_history(directory)), 1)
+
+            confirmed = urllib.request.Request(
+                self.base + "/api/history/purge",
+                data=json.dumps({"confirm": "DELETE_HISTORY"}).encode(), method="POST",
+                headers={"Content-Type": "application/json",
+                        "X-Sorglos-Sentinel-Token": self.state.session_token},
+            )
+            with urllib.request.urlopen(confirmed) as response:
+                self.assertEqual(json.load(response)["deleted"], 1)
+            self.assertEqual(load_history(directory), [])
+            self.assertEqual(len(list_reports(directory)), 1)
+
+    def test_reports_are_listed_and_served(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.state.config = self.state.config.merge({"output_dir": directory})
+            result = ScanResult("192.0.2.0/24", "2026-01-01T00:00:00+00:00",
+                                "2026-01-01T00:00:01+00:00",
+                                devices=[Device("192.0.2.1", hostname="<router>")])
+            export_reports(result, ["html", "json"], directory)
+            with urllib.request.urlopen(self.base + "/api/reports") as response:
+                reports = json.load(response)["reports"]
+            self.assertEqual(len(reports), 2)
+            html_name = next(item["name"] for item in reports if item["format"] == "html")
+            with urllib.request.urlopen(
+                self.base + f"/api/reports/{html_name}"
+            ) as response:
+                self.assertEqual(response.status, 200)
+                self.assertIn("inline", response.headers["Content-Disposition"])
+                self.assertIn("&lt;router&gt;", response.read().decode("utf-8"))
+            with urllib.request.urlopen(
+                self.base + f"/api/reports/{html_name}?download=1"
+            ) as response:
+                self.assertIn("attachment", response.headers["Content-Disposition"])
+
+    def test_report_path_traversal_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.state.config = self.state.config.merge({"output_dir": directory})
+            with self.assertRaises(urllib.error.HTTPError) as context:
+                urllib.request.urlopen(self.base + "/api/reports/..%2Fsettings.json")
+            self.assertEqual(context.exception.code, 404)
 
 
 if __name__ == "__main__":
