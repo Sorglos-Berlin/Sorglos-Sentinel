@@ -3,18 +3,47 @@
 Alle wesentlichen Änderungen werden in dieser Datei dokumentiert. Das Format
 orientiert sich an Keep a Changelog; Versionen folgen Semantic Versioning.
 
-## [Unreleased]
+## [1.3.0] - 2026-08-17
+
+### Hinzugefügt
+
+- Die „Berichte"-Seite listet bereits erzeugte Berichte (CSV/JSON/HTML)
+  auf und erlaubt, sie direkt im Dashboard anzuzeigen (HTML) oder
+  herunterzuladen (CSV/JSON/HTML), statt nur den lokalen Dateipfad
+  anzuzeigen.
+- Statistik: Ein Klick auf einen Verlaufseintrag öffnet jetzt eine eigene
+  Detailansicht (statt eines kleinen Popups) mit vollständiger Geräte- und
+  Befundliste.
+- Statistik: Nach dem Erstellen eines Statistikberichts werden direkt
+  „Anzeigen"/„Herunterladen"-Links angezeigt statt nur des Dateipfads.
+- Statistik: Der gesamte lokale Scanverlauf kann jetzt über die
+  Oberfläche gelöscht werden (mit ausdrücklicher Bestätigung); der
+  entsprechende Endpunkt existierte bisher nur ohne UI.
+- Schwachstellen: Such- und Schweregrad-Filter ergänzt (bisher gab es auf
+  dieser Seite keinerlei Filtermöglichkeit).
 
 ### Behoben
 
 - Ein ungültiger IPv4-Bereich (fehlerhafte CIDR-Schreibweise) erzeugte eine
   unübersetzte, technische Fehlermeldung statt eines verständlichen deutschen
   Hinweises.
+- Ein nicht beschreibbarer lokaler Datenordner (z. B. durch Berechtigungen,
+  Virenscanner oder vollen Datenträger) ließ die Verbindung zum Dashboard
+  ohne Fehlermeldung abbrechen, statt einen verständlichen Hinweis
+  anzuzeigen.
+- Der Leerzustand „Keine Geräte entsprechen den Filtern" blieb in der
+  Geräteansicht sichtbar, obwohl gefilterte Geräte angezeigt wurden
+  (CSS-Regel überschrieb das `hidden`-Attribut). Gleicher Fehler bei den
+  Netzwerk-Tabs in der Statistikansicht behoben.
 
 ### Entfernt
 
 - Migrationscode für lokale Daten aus dem früheren Arbeitstitel-Datenordner
   entfernt, da nie eine Installation unter diesem Namen im Umlauf war.
+- Die Konfigurationsoptionen `audit_depth`, `risk_threshold` und die
+  `compliance`-Auswahl sowie das CLI-Flag `--trend-analysis` entfernt:
+  Sie hatten keine Wirkung auf den tatsächlichen Scan oder die Auswertung
+  und täuschten dadurch nicht vorhandenes Verhalten vor.
 
 ## [1.2.0] - 2026-08-17
 
