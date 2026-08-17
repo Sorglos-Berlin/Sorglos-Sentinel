@@ -5,6 +5,12 @@ orientiert sich an Keep a Changelog; Versionen folgen Semantic Versioning.
 
 ## [Unreleased]
 
+### Behoben
+
+- Ein ungültiger IPv4-Bereich (fehlerhafte CIDR-Schreibweise) erzeugte eine
+  unübersetzte, technische Fehlermeldung statt eines verständlichen deutschen
+  Hinweises.
+
 ### Entfernt
 
 - Migrationscode für lokale Daten aus dem früheren Arbeitstitel-Datenordner

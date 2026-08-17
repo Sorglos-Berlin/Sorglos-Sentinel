@@ -84,6 +84,10 @@ class ConfigTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "keine private lokale IPv4-Adresse"):
             Config(subnet="").validate()
 
+    def test_invalid_cidr_has_german_validation_error(self):
+        with self.assertRaisesRegex(ValueError, "kein gültiger IPv4-Bereich"):
+            Config(subnet="999.999.999.0/99").validate()
+
     def test_bad_concurrency_rejected(self):
         with self.assertRaises(ValueError):
             Config(max_concurrent=0).validate()

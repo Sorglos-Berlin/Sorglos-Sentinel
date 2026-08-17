@@ -108,7 +108,13 @@ class Config:
                 "Es wurde keine private lokale IPv4-Adresse erkannt. "
                 "Bitte einen autorisierten privaten IPv4-Bereich in CIDR-Schreibweise angeben."
             )
-        network = ipaddress.ip_network(self.subnet, strict=False)
+        try:
+            network = ipaddress.ip_network(self.subnet, strict=False)
+        except ValueError:
+            raise ValueError(
+                f"„{self.subnet}“ ist kein gültiger IPv4-Bereich in "
+                "CIDR-Schreibweise (Beispiel: 192.168.0.0/24)."
+            ) from None
         if network.version != 4:
             raise ValueError("Es werden ausschließlich IPv4-Netze unterstützt.")
         if not self.allow_public_targets and not any(
