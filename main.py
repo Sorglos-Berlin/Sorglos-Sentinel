@@ -33,10 +33,6 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--format", dest="formats", help="console,csv,json,html,pdf")
     result.add_argument("--output", dest="output_dir")
     result.add_argument("--security-audit", action="store_true", default=None)
-    result.add_argument("--audit-depth", choices=["basic", "standard", "deep", "comprehensive"])
-    result.add_argument("--risk-threshold", type=int)
-    result.add_argument("--compliance", choices=["pci_dss", "iso_27001", "bsi_grundschutz"])
-    result.add_argument("--trend-analysis", action="store_true")
     result.add_argument("--gui", action="store_true",
                         help="Lokale HTML-Oberfläche öffnen")
     result.add_argument("--web", action="store_true",
@@ -62,8 +58,6 @@ def build_config(args: argparse.Namespace) -> Config:
         values["ports"] = [int(item.strip()) for item in args.ports.split(",") if item.strip()]
     if args.formats:
         values["formats"] = [item.strip() for item in args.formats.split(",") if item.strip()]
-    if args.compliance:
-        values["compliance"] = [args.compliance]
     return config.merge(values)
 
 

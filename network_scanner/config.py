@@ -68,14 +68,9 @@ class Config:
     output_dir: str = field(default_factory=default_report_dir)
     formats: list[str] = field(default_factory=lambda: ["console"])
     security_audit_enabled: bool = True
-    audit_depth: str = "standard"
-    risk_threshold: int = 30
     credential_testing_enabled: bool = False
     allow_public_targets: bool = False
     oui_file: str = ""
-    compliance: list[str] = field(
-        default_factory=lambda: ["pci_dss", "iso_27001", "bsi_grundschutz"]
-    )
 
     @classmethod
     def from_file(cls, path: str) -> "Config":
