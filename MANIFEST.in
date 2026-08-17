@@ -1,0 +1,4 @@
+include LICENSE NOTICE README.md INSTALL.md ACCEPTABLE_USE.md DISCLAIMER.md
+include PRIVACY.md SECURITY.md THIRD_PARTY_NOTICES.md CONTRIBUTING.md
+include CODE_OF_CONDUCT.md SUPPORT.md CHANGELOG.md CITATION.cff
+recursive-include network_scanner/web *.html *.css *.js

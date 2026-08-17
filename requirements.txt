@@ -1,0 +1,4 @@
+# YAML configuration support (JSON works without this dependency).
+PyYAML>=6,<7
+# Optional PDF export:
+# WeasyPrint>=62,<70

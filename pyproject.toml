@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "network-sentinel"
+version = "1.0.0"
+description = "Local-only, non-destructive IPv4 network security scanner"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = [
+  "LICENSE", "NOTICE", "DISCLAIMER.md", "PRIVACY.md", "SECURITY.md",
+  "THIRD_PARTY_NOTICES.md", "ACCEPTABLE_USE.md",
+]
+authors = [{name = "Sorglos-Apps"}]
+keywords = ["network", "security", "scanner", "audit", "defensive-security"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: System Administrators",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security",
+  "Topic :: System :: Networking :: Monitoring",
+]
+dependencies = ["PyYAML>=6,<7"]
+
+[project.optional-dependencies]
+arp = ["scapy>=2.5,<3"]
+pdf = ["WeasyPrint>=62,<70"]
+dev = ["build>=1.2", "twine>=5", "pyinstaller>=6.10,<7", "pillow>=11,<13"]
+
+[project.scripts]
+network-sentinel = "main:main"
+
+[project.urls]
+Homepage = "https://sorglos-apps.de/"
+Support = "https://sorglos-apps.de/Support/"
+
+[tool.setuptools]
+py-modules = ["main"]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["network_scanner*"]
+
+[tool.setuptools.package-data]
+network_scanner = ["web/*.html", "web/*.css", "web/*.js"]

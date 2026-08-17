@@ -1,0 +1,36 @@
+name: Fehler melden
+description: Reproduzierbaren Fehler ohne vertrauliche Netzwerkdaten melden
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: checkboxes
+    attributes:
+      label: Vorprüfung
+      options:
+        - label: Ich habe keine Zugangsdaten oder vertraulichen Scanergebnisse eingefügt.
+          required: true
+        - label: Es handelt sich nicht um eine vertrauliche Sicherheitslücke.
+          required: true
+  - type: input
+    attributes:
+      label: Version
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Betriebssystem
+      options: [Windows, macOS, Linux, Anderes]
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Fehlerbeschreibung und Schritte
+      description: IP-, MAC- und Hostnamen bitte anonymisieren.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Erwartetes Verhalten
+    validations:
+      required: true

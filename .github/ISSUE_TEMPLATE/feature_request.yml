@@ -1,0 +1,21 @@
+name: Funktionswunsch
+description: Defensive Erweiterung vorschlagen
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    attributes:
+      label: Problem und Nutzen
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Gewünschte Lösung
+    validations:
+      required: true
+  - type: checkboxes
+    attributes:
+      label: Sicherheitsrahmen
+      options:
+        - label: Die Funktion benötigt keine unbefugten Zugriffe, Exploits oder Datenveränderungen.
+          required: true

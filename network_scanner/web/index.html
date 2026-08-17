@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Network Sentinel</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><span class="logo">◉</span><div><strong>Network<br>Sentinel</strong><small id="app-version">Version wird ermittelt</small></div></div>
+      <nav aria-label="Hauptnavigation">
+        <button class="nav active" data-page="dashboard"><span>▦</span>Dashboard</button>
+        <button class="nav" data-page="devices"><span>⌁</span>Geräte</button>
+        <button class="nav" data-page="risks"><span>△</span>Schwachstellen</button>
+        <button class="nav" data-page="statistics"><span>⌁</span>Statistik</button>
+        <button class="nav" data-page="reports"><span>▤</span>Berichte</button>
+        <button class="nav" data-page="settings"><span>⚙</span>Einstellungen</button>
+      </nav>
+      <button class="support-nav" id="support-button" hidden><span>♥</span><strong>Unterstützen</strong></button>
+      <div class="local"><i></i> Lokal · Nicht-invasiv</div>
+    </aside>
+
+    <main>
+      <header>
+        <div><h1 id="page-title">Dashboard</h1><p id="page-subtitle">Übersicht über dein lokales Netzwerk</p></div>
+        <div class="header-actions">
+          <button class="icon-button" id="theme" aria-label="Farbschema wechseln">◐</button>
+          <button class="primary" id="scan-top">▶ <span>Scan starten</span></button>
+        </div>
+      </header>
+
+      <section class="page active" id="dashboard">
+        <div class="scan-state">
+          <span class="status-dot"></span>
+          <strong id="status-title">Bereit für einen Scan</strong>
+          <span id="status-detail">Nur eigene oder autorisierte Netzwerke prüfen</span>
+          <span class="current-scope" title="Aktuell eingestellter Scanbereich"><i>⌁</i><b id="dashboard-subnet">Wird erkannt …</b></span>
+          <div class="loader" hidden><i></i></div>
+        </div>
+        <div class="scan-stage" id="scan-stage" hidden aria-live="polite">
+          <div class="radar-wrap">
+            <div class="radar" id="scan-radar">
+              <div class="radar-grid"></div><div class="radar-sweep"></div>
+              <div class="radar-origin"></div><div class="radar-blips" id="radar-blips"></div>
+            </div>
+          </div>
+          <div class="scan-copy">
+            <span class="scan-eyebrow">LIVE NETWORK DISCOVERY</span>
+            <h2 id="scan-phase">Netzwerk wird vorbereitet</h2>
+            <p id="scan-phase-detail">Scanner und Netzwerkadapter werden initialisiert.</p>
+            <div class="scan-counters">
+              <div><strong id="scan-found">0</strong><span>Geräte erkannt</span></div>
+              <div><strong id="scan-target">—</strong><span>Zielbereich</span></div>
+              <div><strong id="scan-elapsed">0:00</strong><span>Laufzeit</span></div>
+            </div>
+            <div class="phase-track"><i id="phase-progress"></i></div>
+            <div class="phase-labels"><span>Discovery</span><span>Ports</span><span>Audit</span><span>Auswertung</span></div>
+          </div>
+          <div class="scan-particles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="metrics">
+          <article class="metric-card clickable" data-detail="health" tabindex="0" role="button" title="Details zur gewichteten Netzwerkbewertung öffnen"><p>Netzwerkzustand</p><strong class="green" id="health">100</strong><small id="overall-risk">Gesamtrisiko 0/100</small><span class="card-action">Details →</span></article>
+          <article class="metric-card clickable" data-detail="highest" tabindex="0" role="button" title="Details zum kritischsten Gerät öffnen"><p>Kritischstes Gerät</p><strong class="red" id="highest-risk">0</strong><small id="highest-device">Noch keine Daten</small><span class="card-action">Gerät öffnen →</span></article>
+          <article class="metric-card clickable" data-detail="coverage" tabindex="0" role="button" title="Details zur Prüfabdeckung öffnen"><p>Prüfabdeckung</p><strong class="blue" id="coverage">0%</strong><small id="coverage-detail">Keine Prüfungen</small><span class="card-action">Prüfungen ansehen →</span></article>
+          <article class="metric-card clickable" data-detail="confidence" tabindex="0" role="button" title="Details zur Nachweisqualität öffnen"><p>Ergebnisvertrauen</p><strong class="orange" id="confidence">—</strong><small id="confidence-detail">Keine Daten</small><span class="card-action">Nachweise ansehen →</span></article>
+        </div>
+        <div class="assessment-strip">
+          <button data-jump="devices"><strong id="device-count">0</strong> Geräte</button>
+          <button data-jump="ports"><strong id="port-count">0</strong> offene Ports</button>
+          <button data-jump="confirmed"><strong id="confirmed-count">0</strong> bestätigte Befunde</button>
+          <button data-jump="exposure"><strong id="exposure-count">0</strong> Expositionen</button>
+          <button data-detail="unclear"><strong id="unclear-count">0</strong> unklare Prüfungen</button>
+          <button data-detail="limitations"><strong id="limited-count">0</strong> bewusst begrenzte Prüfungen</button>
+        </div>
+        <div class="dashboard-grid">
+          <article class="card risk-card clickable" tabindex="0" role="button" data-jump="risk-chart" title="Geräte nach Risikokategorie öffnen">
+            <h2>Risikoverteilung</h2>
+            <div class="risk-content"><div class="donut" id="donut"><div><strong>0</strong><span>Geräte</span></div></div><div id="legend"></div></div>
+          </article>
+          <article class="card">
+            <h2>Live-Aktivität</h2>
+            <div class="feed" id="feed"><div><i></i><p><strong>Noch keine Ereignisse</strong><span>Starte einen neuen Scan.</span></p></div></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="page" id="devices">
+        <div class="device-summary">
+          <article><span class="summary-icon online">●</span><div><strong id="devices-online">0</strong><small>Erkannte Geräte</small></div></article>
+          <article><span class="summary-icon risky">△</span><div><strong id="devices-risky">0</strong><small>Erhöhtes Risiko</small></div></article>
+          <article><span class="summary-icon unknown">?</span><div><strong id="devices-unknown">0</strong><small>Ohne Gerätenamen</small></div></article>
+          <article><span class="summary-icon services">⌁</span><div><strong id="devices-services">0</strong><small>Mit offenen Diensten</small></div></article>
+        </div>
+        <div class="tools">
+          <label class="search">⌕ <input id="device-search" placeholder="IP, Hostname oder Hersteller suchen"></label>
+          <select id="risk-filter"><option>Alle Risiken</option><option>Sicher</option><option>Niedrig</option><option>Mittel</option><option>Hoch</option><option>Kritisch</option></select>
+          <select id="service-filter" aria-label="Nach Dienst filtern"><option value="all">Alle Dienste</option><option value="web">Web</option><option value="remote">Remote-Zugriff</option><option value="database">Datenbanken</option><option value="infrastructure">Infrastruktur / IoT</option><option value="none">Keine offenen Ports</option></select>
+          <select id="device-sort" aria-label="Geräte sortieren"><option value="risk-desc">Risiko absteigend</option><option value="ip">IP-Adresse</option><option value="name">Gerätename</option><option value="ports-desc">Meiste Ports</option></select>
+          <button class="clear-filters" id="clear-device-filters" title="Alle Filter zurücksetzen">×</button>
+        </div>
+        <div class="device-layout">
+          <div class="card table-card device-table"><div class="table-caption"><span id="device-result-count">0 Geräte</span><small>Klicke auf ein Gerät, um Details zu öffnen</small></div><table><thead><tr><th>Gerät</th><th>IP-Adresse</th><th>MAC / Hersteller</th><th>Offene Ports</th><th>Risiko</th></tr></thead><tbody id="devices-body"></tbody></table><div class="empty" id="devices-empty"><span>⌁</span><strong>Keine passenden Geräte</strong><p>Ändere die Suche oder setze die Filter zurück.</p><button id="empty-clear-filters">Filter zurücksetzen</button></div></div>
+          <aside class="card detail" id="device-detail"><div class="empty-detail"><span>⌁</span><strong>Gerät auswählen</strong><p>Ports, Befunde und Empfehlungen erscheinen hier.</p></div></aside>
+        </div>
+      </section>
+
+      <section class="page" id="risks">
+        <div class="section-heading"><div><h2 id="finding-count">0 offene Befunde</h2><p id="finding-subtitle">Nach Schweregrad sortiert</p></div><button class="active-device-filter" id="active-device-filter" hidden><span id="active-device-filter-name"></span><i>×</i></button></div>
+        <div class="card table-card"><table><thead><tr><th>Schweregrad</th><th>Befund</th><th>Gerät</th><th>Nachweis / Konfidenz</th><th>Empfehlung</th></tr></thead><tbody id="risks-body"></tbody></table><div class="empty" id="risks-empty">Keine Sicherheitsbefunde vorhanden.</div></div>
+      </section>
+
+      <section class="page" id="statistics">
+        <div class="section-heading statistics-heading"><div><h2>Lokaler Scanverlauf</h2><p>Jeder IP-Bereich wird getrennt ausgewertet</p></div><div class="statistics-actions"><label><span>Statistik für</span><select id="statistics-subnet" aria-label="IP-Bereich für Statistik auswählen"><option value="">Aktueller IP-Bereich</option></select></label><button class="primary" id="export-statistics">Statistikbericht erstellen</button></div></div>
+        <div class="network-stat-tabs" id="network-stat-tabs" hidden></div>
+        <div class="history-metrics">
+          <article class="card"><span>Gespeicherte Scans</span><strong id="history-total">0</strong><small id="history-period">Noch keine Daten</small></article>
+          <article class="card"><span>Aktueller Zustand</span><strong class="green" id="history-health">—</strong><small id="history-health-change">Kein Vergleich</small></article>
+          <article class="card"><span>Aktuelles Risiko</span><strong class="red" id="history-risk">—</strong><small id="history-risk-change">Kein Vergleich</small></article>
+          <article class="card"><span>Aktuelle Befunde</span><strong class="orange" id="history-findings">—</strong><small id="history-findings-change">Kein Vergleich</small></article>
+        </div>
+        <div class="history-grid">
+          <article class="card trend-card"><div class="card-heading"><div><h2>Zeitlicher Verlauf</h2><p>Zustand und Gesamtrisiko der letzten 30 Scans</p></div><div class="trend-legend"><span><i class="health-line"></i>Zustand</span><span><i class="risk-line"></i>Risiko</span></div></div><div class="trend-chart" id="trend-chart"><div class="empty-chart">Nach dem ersten Scan erscheint hier der Verlauf.</div></div></article>
+          <article class="card history-insights"><h2>Zusammenfassung</h2><div id="history-insights"><p class="muted">Noch keine historischen Daten vorhanden.</p></div></article>
+        </div>
+        <article class="card table-card history-table"><div class="table-caption"><span id="history-count">0 Scans</span><small>Klicke auf einen Scan, um alle Details zu öffnen</small></div><table><thead><tr><th>Zeitpunkt</th><th>Netzwerk</th><th>Geräte</th><th>Offene Ports</th><th>Befunde</th><th>Risiko</th><th>Zustand</th></tr></thead><tbody id="history-body"></tbody></table><div class="empty" id="history-empty">Noch keine abgeschlossenen Scans gespeichert.</div></article>
+        <div class="notice" id="statistics-export-result" hidden></div>
+      </section>
+
+      <section class="page" id="reports">
+        <article class="card report-intro"><div class="report-icon">▤</div><div><h2>Berichte exportieren</h2><p>Erstelle einen interaktiven Sicherheitsbericht oder strukturierte Daten.</p><span id="report-status">Noch kein Scanergebnis verfügbar.</span></div></article>
+        <div class="report-options">
+          <button data-export="html"><strong>HTML</strong><span>Interaktiver Bericht</span></button>
+          <button data-export="json"><strong>JSON</strong><span>Für Automatisierung</span></button>
+          <button data-export="csv"><strong>CSV</strong><span>Für Tabellen</span></button>
+          <button data-export="all"><strong>Alle Formate</strong><span>Komplettes Paket</span></button>
+        </div>
+        <div class="notice" id="export-result" hidden></div>
+      </section>
+
+      <section class="page" id="settings">
+        <form class="card settings" id="settings-form">
+          <div><h2>Scan-Einstellungen</h2><p>Bereich, Modus und Prüftiefe konfigurieren.</p></div>
+          <label><span>IPv4-Scanbereich</span><input id="subnet" value="" placeholder="Wird automatisch erkannt" required></label>
+          <div class="scope-help"><span>⌁</span><p><strong id="local-ip-label">Lokale IP wird erkannt</strong><small>Beim Start wird automatisch das zugehörige /24-Netz verwendet. Du kannst hier einen anderen privaten IP-Bereich eintragen, zum Beispiel 192.168.10.0/24.</small></p></div>
+          <label><span>Scan-Modus</span><select id="scan-type"><option value="full">Vollständig</option><option value="arp">ARP Discovery</option><option value="icmp">ICMP Discovery</option><option value="custom">Benutzerdefiniert</option></select></label>
+          <label><span>TCP-Ports</span><input id="ports" value="21,22,23,25,53,80,110,143,389,443,445,465,502,636,993,995,1433,1883,3306,3389,5432,6379,8080,8443,8883,27017"></label>
+          <label><span>Timeout pro Ziel</span><input id="timeout" type="number" min=".05" max="30" step=".1" value="1"></label>
+          <label class="switch-row"><span><strong>Sicherheits-Audit</strong><small>Nicht-invasive TLS-, HTTP- und Dienstprüfungen</small></span><input id="security-audit" type="checkbox" checked><i></i></label>
+        </form>
+        <div class="security-note"><span>✓</span><p><strong>Sicherheitsprinzip</strong>Keine Exploits, Passwortangriffe oder Konfigurationsänderungen.</p></div>
+        <div class="provider-links"><span>Network Sentinel · Sorglos-Apps</span><nav><a href="https://sorglos-apps.de/" target="_blank" rel="noopener noreferrer">Website</a><a href="https://sorglos-apps.de/Support/" target="_blank" rel="noopener noreferrer">Support</a><a href="https://sorglos-apps.de/Main/Datenschutz1.html" target="_blank" rel="noopener noreferrer">Datenschutz</a><a href="https://sorglos-apps.de/Main/Impressum.html" target="_blank" rel="noopener noreferrer">Impressum</a></nav></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="consent">
+    <form method="dialog">
+      <div class="dialog-icon">◉</div><h2>Scan autorisieren</h2>
+      <p>Bestätige, dass du dieses Netzwerk besitzt oder eine ausdrückliche Erlaubnis für den Scan hast.</p>
+      <label class="consent-check"><input id="authorized" type="checkbox"> Ich bin zum Scan dieses Netzwerks berechtigt.</label>
+      <div class="dialog-actions"><button value="cancel">Abbrechen</button><button class="primary" id="confirm-scan" value="default" disabled>Scan starten</button></div>
+    </form>
+  </dialog>
+  <dialog id="detail-dialog" class="detail-dialog">
+    <div class="detail-dialog-head"><div><span id="detail-kicker">AUSWERTUNG</span><h2 id="detail-title">Details</h2></div><button id="detail-close" aria-label="Detailansicht schließen">×</button></div>
+    <div id="detail-content"></div>
+    <div class="detail-dialog-actions"><button id="detail-secondary" hidden>Zur Ansicht</button><button class="primary" id="detail-ok">Schließen</button></div>
+  </dialog>
+  <dialog id="support-dialog" class="support-dialog">
+    <button class="support-close" id="support-close" aria-label="Unterstützungsdialog schließen">×</button>
+    <div class="support-symbol">♥</div>
+    <span>OPEN SOURCE UNTERSTÜTZEN</span>
+    <h2>Hilf bei der Weiterentwicklung</h2>
+    <p>Network Sentinel bleibt frei, lokal und ohne Tracking. Deine freiwillige Unterstützung hilft bei Tests, Dokumentation und neuen defensiven Prüfungen.</p>
+    <a id="sponsor-link" target="_blank" rel="noopener noreferrer">Sorglos-Apps unterstützen ↗</a>
+    <small>Die Unterstützung ist freiwillig und schaltet keine Funktionen frei.</small>
+  </dialog>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

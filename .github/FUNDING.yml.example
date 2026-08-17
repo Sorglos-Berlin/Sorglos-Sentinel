@@ -1,0 +1,4 @@
+# Nach Freischaltung von GitHub Sponsors in FUNDING.yml umbenennen und ersetzen:
+# github: YOUR_GITHUB_USERNAME
+# Alternativ ist eine echte HTTPS-Unterstützungsseite möglich:
+# custom: ["https://example.com/support-network-sentinel"]

@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "Wenn du Network Sentinel in Forschung oder Lehre verwendest, zitiere bitte dieses Projekt."
+title: "Network Sentinel"
+type: software
+authors:
+  - name: "Sorglos-Apps"
+version: 1.0.0
+date-released: 2026-07-31
+license: MIT
