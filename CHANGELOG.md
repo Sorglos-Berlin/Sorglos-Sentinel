@@ -5,6 +5,11 @@ orientiert sich an Keep a Changelog; Versionen folgen Semantic Versioning.
 
 ## [Unreleased]
 
+### Entfernt
+
+- Migrationscode für lokale Daten aus dem früheren Arbeitstitel-Datenordner
+  entfernt, da nie eine Installation unter diesem Namen im Umlauf war.
+
 ## [1.2.0] - 2026-08-17
 
 ### Hinzugefügt
@@ -51,11 +56,11 @@ orientiert sich an Keep a Changelog; Versionen folgen Semantic Versioning.
 
 ### Changed
 
-- Produkt, Paket, Oberfläche, Installer und Dokumentation von „Network Sentinel“
-  auf „Sorglos Sentinel“ umbenannt
+- Produkt, Paket, Oberfläche, Installer und Dokumentation vom bisherigen
+  Arbeitstitel auf „Sorglos Sentinel“ umbenannt
 - Installations- und lokale Datenpfade an den neuen Produktnamen angepasst
-- Bestehende lokale Scan-Historien werden beim ersten Start verlustfrei in den
-  neuen Datenordner kopiert; der alte Ordner bleibt als Sicherung erhalten
+- Bestehende lokale Scan-Historien wurden beim ersten Start verlustfrei in den
+  neuen Datenordner kopiert; der alte Ordner blieb als Sicherung erhalten
 - MIT-lizenzierten Quellcode klar von Marken- und Logorechten getrennt
 
 ### Added

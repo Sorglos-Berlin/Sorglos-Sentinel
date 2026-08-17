@@ -32,7 +32,6 @@ from network_scanner.security import (
     audit_device, audit_exposed_services, audit_ssh, audit_starttls, audit_web,
     evaluate, record_audit_boundaries,
 )
-from network_scanner.storage import application_data_dir
 from network_scanner.webapp import AppState, DashboardHandler
 from network_scanner.version import get_build_info
 
@@ -84,20 +83,6 @@ class ConfigTests(unittest.TestCase):
     def test_missing_scan_scope_has_clear_validation_error(self):
         with self.assertRaisesRegex(ValueError, "keine private lokale IPv4-Adresse"):
             Config(subnet="").validate()
-
-    @unittest.skipUnless(__import__("os").name == "nt", "Windows data migration")
-    def test_renamed_application_preserves_legacy_local_data(self):
-        with tempfile.TemporaryDirectory() as directory:
-            base = Path(directory)
-            legacy = base / "Sorglos-Apps" / "Network Sentinel"
-            legacy.mkdir(parents=True)
-            (legacy / "existing.txt").write_text("local scan data", encoding="utf-8")
-            with patch.dict("os.environ", {"LOCALAPPDATA": directory}, clear=False):
-                current = application_data_dir()
-            self.assertEqual(current.name, "Sorglos Sentinel")
-            self.assertEqual((current / "existing.txt").read_text(encoding="utf-8"),
-                             "local scan data")
-            self.assertTrue((legacy / "existing.txt").exists())
 
     def test_bad_concurrency_rejected(self):
         with self.assertRaises(ValueError):

@@ -22,5 +22,5 @@ Sorglos Sentinel wird unter der MIT-Lizenz ohne Gewährleistung bereitgestellt.
 Der vollständige Lizenztext, Datenschutzinformationen, Haftungshinweise und
 Drittanbieterhinweise werden mitinstalliert und sind im Quellrepository einsehbar.
 
-Mit dem Fortsetzen bestätigst du, diese Hinweise gelesen zu haben und Network
+Mit dem Fortsetzen bestätigst du, diese Hinweise gelesen zu haben und Sorglos
 Sentinel nur im zulässigen und autorisierten Rahmen zu verwenden.
