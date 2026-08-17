@@ -1,5 +1,12 @@
-Network Sentinel
-Copyright (c) 2026 Sorglos-Apps and Network Sentinel contributors
+Sorglos Sentinel
+Copyright (c) 2026 Sorglos-Apps and Sorglos Sentinel contributors
+
+The names "Sorglos-Apps" and "Sorglos Sentinel" and the Sorglos Sentinel logo
+are project identifiers. The MIT License does not grant trademark rights in
+these names or the logo.
+
+Logo and brand image files under network_scanner/web/assets are separately
+licensed under BRAND_LICENSE.md and are not covered by the MIT License.
 
 This product includes optional integrations with third-party software. These
 components are not bundled unless explicitly stated. See THIRD_PARTY_NOTICES.md.

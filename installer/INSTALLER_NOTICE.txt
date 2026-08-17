@@ -1,6 +1,6 @@
-NETWORK SENTINEL – WICHTIGE HINWEISE
+SORGLOS SENTINEL – WICHTIGE HINWEISE
 
-Network Sentinel darf ausschließlich in eigenen Netzwerken oder für Ziele
+Sorglos Sentinel darf ausschließlich in eigenen Netzwerken oder für Ziele
 eingesetzt werden, für die eine ausdrückliche Erlaubnis zum Scan vorliegt.
 
 Die Anwendung führt defensive Netzwerk- und Sicherheitsprüfungen durch. Trotz
@@ -18,7 +18,7 @@ Diese Daten können IP-Adressen, MAC-Adressen, Gerätenamen und technische
 Sicherheitsinformationen enthalten und müssen vor unbefugtem Zugriff geschützt
 werden.
 
-Network Sentinel wird unter der MIT-Lizenz ohne Gewährleistung bereitgestellt.
+Sorglos Sentinel wird unter der MIT-Lizenz ohne Gewährleistung bereitgestellt.
 Der vollständige Lizenztext, Datenschutzinformationen, Haftungshinweise und
 Drittanbieterhinweise werden mitinstalliert und sind im Quellrepository einsehbar.
 

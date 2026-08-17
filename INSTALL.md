@@ -1,4 +1,4 @@
-# Network Sentinel installieren
+# Sorglos Sentinel installieren
 
 ## Empfohlen: Windows-Installer
 
@@ -14,13 +14,13 @@ benötigt.
 ### Installation
 
 1. Im Bereich **Releases** dieses GitHub-Repositorys die neueste Datei
-   `Network-Sentinel-Setup-<Version>.exe` herunterladen.
+   `Sorglos-Sentinel-Setup-<Version>.exe` herunterladen.
 2. Optional die SHA-256-Prüfsumme mit der ebenfalls veröffentlichten Datei
    `SHA256SUMS.txt` vergleichen.
 3. Den Installer doppelt anklicken.
 4. Sicherheits-, Nutzungs- und Lizenzhinweise lesen und bestätigen.
 5. Optional eine Desktop-Verknüpfung auswählen.
-6. **Installieren** und anschließend **Network Sentinel starten** wählen.
+6. **Installieren** und anschließend **Sorglos Sentinel starten** wählen.
 
 Der Installer richtet einen Startmenüeintrag und einen normalen Windows-
 Deinstaller ein. Standardmäßig wird nur für den aktuellen Benutzer installiert;
@@ -34,7 +34,7 @@ Administratorrechte sind dafür nicht erforderlich.
 
 ## Starten
 
-Network Sentinel kann anschließend über das Windows-Startmenü oder die optionale
+Sorglos Sentinel kann anschließend über das Windows-Startmenü oder die optionale
 Desktop-Verknüpfung gestartet werden. Die Anwendung öffnet das Dashboard im
 Standardbrowser und stellt es ausschließlich lokal unter
 `http://127.0.0.1:8765` bereit.
@@ -47,11 +47,11 @@ werden.
 
 Programmdateien und persönliche Scandaten werden bewusst getrennt gespeichert:
 
-- Programm: `%LOCALAPPDATA%\Programs\Sorglos-Apps\Network Sentinel\`
+- Programm: `%LOCALAPPDATA%\Programs\Sorglos-Apps\Sorglos Sentinel\`
 - Berichte und Scan-Historie:
-  `%LOCALAPPDATA%\Sorglos-Apps\Network Sentinel\reports\`
+  `%LOCALAPPDATA%\Sorglos-Apps\Sorglos Sentinel\reports\`
 - Fehlerprotokoll:
-  `%LOCALAPPDATA%\Sorglos-Apps\Network Sentinel\network-sentinel.log`
+  `%LOCALAPPDATA%\Sorglos-Apps\Sorglos Sentinel\sorglos-sentinel.log`
 
 Ein Update oder eine normale Deinstallation entfernt die lokale Scan-Historie
 nicht automatisch. Dadurch gehen Berichte nicht versehentlich verloren. Die
@@ -62,7 +62,7 @@ werden.
 
 ## Aktualisieren
 
-Eine neuere `Network-Sentinel-Setup-<Version>.exe` aus dem offiziellen Release-
+Eine neuere `Sorglos-Sentinel-Setup-<Version>.exe` aus dem offiziellen Release-
 Bereich herunterladen und ausführen. Der Installer aktualisiert die vorhandenen
 Programmdateien. Lokale Einstellungen, Berichte und Statistiken bleiben erhalten.
 
@@ -72,14 +72,14 @@ Seitenleiste.
 ## Deinstallieren
 
 Unter **Windows-Einstellungen → Apps → Installierte Apps** den Eintrag
-**Network Sentinel** auswählen und **Deinstallieren** anklicken. Alternativ steht
-im Startmenü unter **Sorglos-Apps → Network Sentinel** ein Deinstaller bereit.
+**Sorglos Sentinel** auswählen und **Deinstallieren** anklicken. Alternativ steht
+im Startmenü unter **Sorglos-Apps → Sorglos Sentinel** ein Deinstaller bereit.
 
 Gespeicherte Scanberichte bleiben aus Sicherheitsgründen erhalten. Wenn sie
 ebenfalls entfernt werden sollen, kann anschließend dieser Ordner manuell
 gelöscht werden:
 
-`%LOCALAPPDATA%\Sorglos-Apps\Network Sentinel\`
+`%LOCALAPPDATA%\Sorglos-Apps\Sorglos Sentinel\`
 
 Vor dem Löschen sollte geprüft werden, ob daraus noch Berichte benötigt werden.
 
@@ -88,7 +88,7 @@ Vor dem Löschen sollte geprüft werden, ob daraus noch Berichte benötigt werde
 PowerShell im Downloadordner öffnen und ausführen:
 
 ```powershell
-Get-FileHash .\Network-Sentinel-Setup-1.0.0.exe -Algorithm SHA256
+Get-FileHash .\Sorglos-Sentinel-Setup-1.2.0.exe -Algorithm SHA256
 ```
 
 Der angezeigte Hash muss exakt dem Eintrag in `SHA256SUMS.txt` des jeweiligen
@@ -100,7 +100,7 @@ Für verwaltete Windows-Arbeitsplätze unterstützt der Installer den stillen
 NSIS-Modus:
 
 ```powershell
-.\Network-Sentinel-Setup-1.0.0.exe /S
+.\Sorglos-Sentinel-Setup-1.2.0.exe /S
 ```
 
 Die Nutzung und der Scanbereich müssen auch bei einer stillen Installation durch
@@ -109,7 +109,7 @@ den Betreiber autorisiert und organisatorisch freigegeben sein.
 ## Portable Anwendung
 
 Ein Release kann zusätzlich einen portablen Anwendungsordner enthalten. Darin
-`Network Sentinel.exe` starten. Auch die portable Variante speichert Berichte
+`Sorglos Sentinel.exe` starten. Auch die portable Variante speichert Berichte
 standardmäßig im oben genannten lokalen Sorglos-Apps-Datenordner und nicht neben
 der EXE.
 
@@ -124,7 +124,7 @@ GitHub-Seite angezeigten Clone-Adresse klonen. Anschließend im Projektordner:
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install .
-network-sentinel
+sorglos-sentinel
 ```
 
 Alternativ lässt sich die lokale HTML-Oberfläche direkt starten:
@@ -152,9 +152,9 @@ Erweiterung sichere Discovery- und TCP-Prüfungen durch.
 Wenn das Dashboard nicht startet:
 
 1. Prüfen, ob bereits eine andere Anwendung Port `8765` verwendet.
-2. Network Sentinel einmal vollständig schließen und neu starten.
+2. Sorglos Sentinel einmal vollständig schließen und neu starten.
 3. Das Fehlerprotokoll unter
-   `%LOCALAPPDATA%\Sorglos-Apps\Network Sentinel\network-sentinel.log` öffnen.
+   `%LOCALAPPDATA%\Sorglos-Apps\Sorglos Sentinel\sorglos-sentinel.log` öffnen.
 4. Keine Firewallfreigabe oder Portweiterleitung für Port `8765` erstellen.
 5. Bei einem reproduzierbaren Fehler einen Issue ohne sensible Scan- oder
    Netzwerkdaten melden.

@@ -11,7 +11,10 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from network_scanner.config import Config, default_local_subnet, is_private_target
+from network_scanner.config import (
+    Config, default_local_subnet, detect_local_ipv4, is_private_target,
+    load_persisted_config, save_persisted_config,
+)
 from network_scanner.assessment import network_assessment
 from network_scanner.history import (
     history_statistics, load_history, load_scan, purge_data, save_history,
@@ -29,13 +32,72 @@ from network_scanner.security import (
     audit_device, audit_exposed_services, audit_ssh, audit_starttls, audit_web,
     evaluate, record_audit_boundaries,
 )
+from network_scanner.storage import application_data_dir
 from network_scanner.webapp import AppState, DashboardHandler
 from network_scanner.version import get_build_info
 
 
 class ConfigTests(unittest.TestCase):
     def test_defaults_validate(self):
-        Config().validate()
+        Config(subnet="192.168.1.0/24").validate()
+
+    def test_complete_scan_and_security_audit_are_defaults(self):
+        config = Config(subnet="192.168.1.0/24")
+        self.assertEqual(config.scan_type, "full")
+        self.assertTrue(config.security_audit_enabled)
+
+    def test_settings_survive_local_round_trip(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "settings.json"
+            expected = Config(
+                subnet="10.20.30.0/24", scan_type="custom", ports=[22, 443],
+                timeout=2.5, security_audit_enabled=False,
+            )
+            save_persisted_config(expected, path)
+            loaded = load_persisted_config(path)
+            self.assertEqual(loaded.subnet, expected.subnet)
+            self.assertEqual(loaded.scan_type, expected.scan_type)
+            self.assertEqual(loaded.ports, expected.ports)
+            self.assertEqual(loaded.timeout, expected.timeout)
+            self.assertFalse(loaded.security_audit_enabled)
+            self.assertFalse(path.with_suffix(".json.tmp").exists())
+
+    def test_invalid_settings_fall_back_to_safe_defaults(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "settings.json"
+            path.write_text("{invalid", encoding="utf-8")
+            loaded = load_persisted_config(path)
+            self.assertEqual(loaded.scan_type, "full")
+            self.assertTrue(loaded.security_audit_enabled)
+
+    @patch("network_scanner.config.socket.getaddrinfo", side_effect=OSError)
+    @patch("network_scanner.config.socket.socket")
+    def test_failed_adapter_detection_returns_no_fabricated_address(self, socket_factory, _lookup):
+        socket_factory.return_value.connect.side_effect = OSError
+        detect_local_ipv4.cache_clear()
+        try:
+            self.assertEqual(detect_local_ipv4(), "")
+            self.assertEqual(default_local_subnet(), "")
+        finally:
+            detect_local_ipv4.cache_clear()
+
+    def test_missing_scan_scope_has_clear_validation_error(self):
+        with self.assertRaisesRegex(ValueError, "keine private lokale IPv4-Adresse"):
+            Config(subnet="").validate()
+
+    @unittest.skipUnless(__import__("os").name == "nt", "Windows data migration")
+    def test_renamed_application_preserves_legacy_local_data(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            legacy = base / "Sorglos-Apps" / "Network Sentinel"
+            legacy.mkdir(parents=True)
+            (legacy / "existing.txt").write_text("local scan data", encoding="utf-8")
+            with patch.dict("os.environ", {"LOCALAPPDATA": directory}, clear=False):
+                current = application_data_dir()
+            self.assertEqual(current.name, "Sorglos Sentinel")
+            self.assertEqual((current / "existing.txt").read_text(encoding="utf-8"),
+                             "local scan data")
+            self.assertTrue((legacy / "existing.txt").exists())
 
     def test_bad_concurrency_rejected(self):
         with self.assertRaises(ValueError):
@@ -57,6 +119,8 @@ class ConfigTests(unittest.TestCase):
 
     def test_default_scan_scope_is_private(self):
         network = default_local_subnet()
+        if not network:
+            self.skipTest("Keine private IPv4-Adresse auf dem Testsystem erkannt")
         self.assertTrue(is_private_target(network.split("/", 1)[0]))
         Config(subnet=network).validate()
 
@@ -116,15 +180,39 @@ class ScannerTests(unittest.TestCase):
             expand_targets("10.0.0.0/8")
 
     def test_oui_lookup(self):
-        self.assertEqual(OuiDatabase().lookup("00:50:56:aa:bb:cc"), "VMware")
+        self.assertEqual(
+            OuiDatabase(include_system=False).lookup("00:50:56:aa:bb:cc"),
+            "VMware",
+        )
 
     def test_unknown_oui(self):
-        self.assertEqual(OuiDatabase().lookup("00:00:00:00:00:01"), "Unbekannt")
+        self.assertEqual(
+            OuiDatabase(include_system=False).lookup("00:00:00:00:00:01"),
+            "Unbekannt",
+        )
 
     def test_private_mac_vendor(self):
         self.assertEqual(
-            OuiDatabase().lookup("86:c3:2c:54:8d:32"), "Private/zufällige MAC"
+            OuiDatabase(include_system=False).lookup("86:c3:2c:54:8d:32"),
+            "Private/zufällige MAC",
         )
+
+    def test_custom_oui_file_has_final_priority(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "vendors.txt"
+            path.write_text("005056 Custom VMware Name\n", encoding="utf-8")
+            database = OuiDatabase(str(path), include_system=False)
+        self.assertEqual(database.lookup("00:50:56:aa:bb:cc"),
+                         "Custom VMware Name")
+
+    @patch("network_scanner.oui.OuiDatabase._system_candidates")
+    def test_builtin_names_override_system_database(self, candidates):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "system-vendors.txt"
+            path.write_text("005056 Inc.\n", encoding="utf-8")
+            candidates.return_value = [path]
+            database = OuiDatabase()
+        self.assertEqual(database.lookup("00:50:56:aa:bb:cc"), "VMware")
 
     def test_parse_windows_arp_cache(self):
         output = """
@@ -205,8 +293,8 @@ class SecurityTests(unittest.TestCase):
         self.assertTrue(device.audit_log)
 
     def test_critical_device_is_not_hidden_by_average(self):
-        devices = [Device("192.0.2.1", risk_score=100)]
-        devices.extend(Device(f"192.0.2.{index}", risk_score=0)
+        devices = [Device("192.0.2.1", risk_score=100, risk_category="Kritisch")]
+        devices.extend(Device(f"192.0.2.{index}", risk_score=0, risk_category="Sicher")
                        for index in range(2, 11))
         summary = network_assessment(devices)
         self.assertGreaterEqual(summary["overall_risk"], 60)
@@ -216,7 +304,7 @@ class SecurityTests(unittest.TestCase):
         device = Device("192.0.2.1", audit_coverage={
             "web": "not_applicable", "services": "completed",
             "tls": "inconclusive",
-        })
+        }, risk_category="Sicher")
         summary = network_assessment([device])
         self.assertEqual(summary["coverage_percent"], 50)
         self.assertEqual(summary["inconclusive_checks"], 1)
@@ -225,7 +313,7 @@ class SecurityTests(unittest.TestCase):
         device = Device("192.0.2.1", findings=[
             Finding("A", "a", "high", 10, "a", "a", confidence="high"),
             Finding("B", "b", "low", 1, "b", "b", confidence="low"),
-        ])
+        ], risk_category="Niedrig")
         summary = network_assessment([device])
         self.assertEqual(summary["confidence_percent"], 65)
         self.assertEqual(summary["confidence_label"], "Mittel")
@@ -234,6 +322,15 @@ class SecurityTests(unittest.TestCase):
         summary = network_assessment([])
         self.assertEqual(summary["confidence_label"], "Keine Daten")
         self.assertEqual(summary["coverage_percent"], 0)
+        self.assertFalse(summary["assessment_available"])
+
+    def test_discovered_but_unaudited_device_is_not_rated_safe(self):
+        device = Device("192.0.2.1")
+        summary = network_assessment([device])
+        self.assertEqual(device.risk_category, "Nicht bewertet")
+        self.assertFalse(summary["assessment_available"])
+        self.assertIsNone(summary["health_score"])
+        self.assertEqual(summary["unassessed_device_count"], 1)
 
     @patch("network_scanner.security._read_protocol",
            side_effect=[b"220 mail", b"250-STARTTLS\r\n250 OK"])
@@ -332,6 +429,22 @@ class HistoryTests(unittest.TestCase):
             self.assertEqual(stats["changes"]["overall_risk"], 20)
             self.assertEqual(stats["changes"]["health_score"], -20)
 
+    def test_unassessed_scan_does_not_create_fake_health_statistics(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = ScanResult(
+                "192.0.2.0/24", "2026-01-01T10:00:00+00:00",
+                "2026-01-01T10:00:05+00:00", scanned_hosts=254,
+                devices=[Device("192.0.2.1")],
+                security_summary=network_assessment([Device("192.0.2.1")]),
+            )
+            save_history(result, directory)
+            stats = history_statistics(directory)
+            self.assertFalse(stats["latest"]["assessment_available"])
+            self.assertIsNone(stats["latest"]["health_score"])
+            self.assertIsNone(stats["best_health"])
+            self.assertEqual(stats["averages"]["devices"], 1.0)
+            self.assertIsNone(stats["averages"]["health_score"])
+
     def test_statistics_are_isolated_by_subnet(self):
         with tempfile.TemporaryDirectory() as directory:
             first = self.result("2026-01-01T10:00:00+00:00", 10)
@@ -371,9 +484,11 @@ class LocalApiSecurityTests(unittest.TestCase):
         self.server.server_close()
 
     def test_status_returns_session_token_and_security_headers(self):
+        self.state.last_scan_summary = {"subnet": "10.0.0.0/24", "devices": 3}
         with urllib.request.urlopen(self.base + "/api/status") as response:
             data = json.load(response)
             self.assertEqual(data["session_token"], self.state.session_token)
+            self.assertEqual(data["last_scan_summary"]["devices"], 3)
             self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
 
     def test_post_without_session_token_is_rejected(self):
@@ -384,6 +499,32 @@ class LocalApiSecurityTests(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError) as context:
             urllib.request.urlopen(request)
         self.assertEqual(context.exception.code, 403)
+
+    @patch("network_scanner.webapp.save_persisted_config")
+    @patch("network_scanner.webapp._scan")
+    def test_scan_target_is_published_as_active_before_worker_starts(self, scan_worker, _save):
+        payload = json.dumps({
+            "authorized": True,
+            "subnet": "10.42.0.0/24",
+            "scan_type": "arp",
+            "security_audit": False,
+        }).encode("utf-8")
+        request = urllib.request.Request(
+            self.base + "/api/scan", data=payload, method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "X-Sorglos-Sentinel-Token": self.state.session_token,
+            },
+        )
+        with urllib.request.urlopen(request) as response:
+            self.assertEqual(response.status, 202)
+        self.assertEqual(self.state.config.subnet, "10.42.0.0/24")
+        self.assertTrue(self.state.scanning)
+        for _ in range(20):
+            if scan_worker.called:
+                break
+            threading.Event().wait(0.01)
+        scan_worker.assert_called_once()
 
     def test_dns_rebinding_host_is_rejected(self):
         request = urllib.request.Request(

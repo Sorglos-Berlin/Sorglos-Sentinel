@@ -14,7 +14,7 @@ body:
   - type: input
     attributes:
       label: Version
-      placeholder: 1.0.0
+      placeholder: 1.1.0
     validations:
       required: true
   - type: dropdown

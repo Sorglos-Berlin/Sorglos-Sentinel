@@ -60,7 +60,7 @@ jobs:
           New-Item -ItemType Directory -Force release | Out-Null
           Copy-Item installer/output/*.exe release/
           Copy-Item dist/*.whl, dist/*.tar.gz release/
-          Compress-Archive -Path "dist/Network Sentinel/*" -DestinationPath "release/Network-Sentinel-Portable-$env:APP_VERSION.zip"
+          Compress-Archive -Path "dist/Sorglos Sentinel/*" -DestinationPath "release/Sorglos-Sentinel-Portable-$env:APP_VERSION.zip"
           $lines = Get-ChildItem release -File | Sort-Object Name | ForEach-Object {
             $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower()
             "$hash  $($_.Name)"
@@ -69,7 +69,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Network-Sentinel-Windows-${{ github.ref_name }}
+          name: Sorglos-Sentinel-Windows-${{ github.ref_name }}
           path: release/*
           if-no-files-found: error
 

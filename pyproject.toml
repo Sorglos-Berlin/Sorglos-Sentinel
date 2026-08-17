@@ -3,15 +3,16 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "network-sentinel"
-version = "1.0.0"
-description = "Local-only, non-destructive IPv4 network security scanner"
+name = "sorglos-sentinel"
+version = "1.2.0"
+description = "Local-only, non-destructive IPv4 network security scanner by Sorglos-Apps"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = [
   "LICENSE", "NOTICE", "DISCLAIMER.md", "PRIVACY.md", "SECURITY.md",
   "THIRD_PARTY_NOTICES.md", "ACCEPTABLE_USE.md",
+  "BRAND_LICENSE.md", "TRADEMARKS.md",
 ]
 authors = [{name = "Sorglos-Apps"}]
 keywords = ["network", "security", "scanner", "audit", "defensive-security"]
@@ -35,11 +36,12 @@ pdf = ["WeasyPrint>=62,<70"]
 dev = ["build>=1.2", "twine>=5", "pyinstaller>=6.10,<7", "pillow>=11,<13"]
 
 [project.scripts]
-network-sentinel = "main:main"
+sorglos-sentinel = "main:main"
 
 [project.urls]
 Homepage = "https://sorglos-apps.de/"
 Support = "https://sorglos-apps.de/Support/"
+Repository = "https://github.com/Sorglos-Berlin/Sorglos-Sentinel"
 
 [tool.setuptools]
 py-modules = ["main"]
@@ -49,4 +51,4 @@ include-package-data = true
 include = ["network_scanner*"]
 
 [tool.setuptools.package-data]
-network_scanner = ["web/*.html", "web/*.css", "web/*.js"]
+network_scanner = ["web/*.html", "web/*.css", "web/*.js", "web/assets/*.png"]

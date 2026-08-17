@@ -15,6 +15,8 @@ a = Analysis(
         (str(project_root / "PRIVACY.md"), "."),
         (str(project_root / "DISCLAIMER.md"), "."),
         (str(project_root / "THIRD_PARTY_NOTICES.md"), "."),
+        (str(project_root / "BRAND_LICENSE.md"), "."),
+        (str(project_root / "TRADEMARKS.md"), "."),
     ],
     hiddenimports=["yaml"],
     hookspath=[],
@@ -25,11 +27,11 @@ a = Analysis(
 pyz = PYZ(a.pure)
 exe = EXE(
     pyz, a.scripts, [], exclude_binaries=True,
-    name="Network Sentinel", debug=False, bootloader_ignore_signals=False,
+    name="Sorglos Sentinel", debug=False, bootloader_ignore_signals=False,
     strip=False, upx=False, console=False, disable_windowed_traceback=False,
     icon=str(icon), version=str(version_file),
 )
 coll = COLLECT(
     exe, a.binaries, a.datas, strip=False, upx=False,
-    name="Network Sentinel",
+    name="Sorglos Sentinel",
 )

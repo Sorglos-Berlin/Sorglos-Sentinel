@@ -20,7 +20,7 @@ DARK = {"bg": "#000000", "side": "#151517", "card": "#1C1C1E",
         "text": "#FFFFFF", "muted": "#A1A1A6", "line": "#38383A",
         "blue": "#0A84FF", "green": "#30D158", "orange": "#FF9F0A",
         "red": "#FF453A", "critical": "#FF375F", "select": "#123354"}
-RISK_NAMES = ("Sicher", "Niedrig", "Mittel", "Hoch", "Kritisch")
+RISK_NAMES = ("Nicht bewertet", "Sicher", "Niedrig", "Mittel", "Hoch", "Kritisch")
 
 
 class ScannerApp(tk.Tk):
@@ -37,7 +37,7 @@ class ScannerApp(tk.Tk):
         self.scanning = False
         self.pages: dict[str, tk.Frame] = {}
         self.nav: dict[str, tk.Button] = {}
-        self.title("Network Sentinel")
+        self.title("Sorglos Sentinel")
         self.geometry("1280x780")
         self.minsize(980, 640)
         self._styles()
@@ -73,7 +73,7 @@ class ScannerApp(tk.Tk):
         logo.pack(fill="x")
         tk.Label(logo, text="◉", bg=self.c["side"], fg=self.c["blue"],
                  font=("Segoe UI", 25, "bold")).pack(side="left", padx=(22, 10))
-        tk.Label(logo, text="Network\nSentinel", bg=self.c["side"],
+        tk.Label(logo, text="Sorglos\nSentinel", bg=self.c["side"],
                  fg=self.c["text"], justify="left",
                  font=("Segoe UI", 13, "bold")).pack(side="left")
         for key, icon, label in [
@@ -153,10 +153,10 @@ class ScannerApp(tk.Tk):
         metrics = tk.Frame(page, bg=self.c["bg"])
         metrics.pack(fill="x")
         self.metrics: dict[str, tk.Label] = {}
-        specs = [("health", "Netzwerkzustand", "100", self.c["green"]),
-                 ("devices", "Aktive Geräte", "0", self.c["blue"]),
-                 ("ports", "Offene Ports", "0", self.c["orange"]),
-                 ("critical", "Kritische Geräte", "0", self.c["red"])]
+        specs = [("health", "Netzwerkzustand", "—", self.c["green"]),
+                 ("devices", "Erkannte Geräte", "—", self.c["blue"]),
+                 ("ports", "Erreichbare Ports", "—", self.c["orange"]),
+                 ("critical", "Kritische Geräte", "—", self.c["red"])]
         for i, (key, title, value, color) in enumerate(specs):
             card = self._card(metrics)
             card.grid(row=0, column=i, sticky="nsew",
@@ -167,7 +167,7 @@ class ScannerApp(tk.Tk):
             label = tk.Label(card, text=value, bg=self.c["card"], fg=color,
                              font=("Segoe UI", 25, "bold"))
             label.pack(anchor="w", padx=16)
-            tk.Label(card, text="seit letztem Scan", bg=self.c["card"],
+            tk.Label(card, text="letztes Scanergebnis", bg=self.c["card"],
                      fg=self.c["muted"], font=("Segoe UI", 8)).pack(
                          anchor="w", padx=16, pady=(0, 13))
             self.metrics[key] = label
@@ -184,7 +184,7 @@ class ScannerApp(tk.Tk):
         self.chart.pack(side="left", padx=10, pady=6)
         self.legend = tk.Frame(chart_card, bg=self.c["card"])
         self.legend.pack(side="left", fill="both", expand=True, pady=20)
-        self._draw_chart({})
+        self._draw_chart(None)
         feed_card = self._card(lower)
         feed_card.pack(side="left", fill="both", expand=True, padx=(7, 0))
         tk.Label(feed_card, text="Live-Aktivität", bg=self.c["card"],
@@ -232,7 +232,7 @@ class ScannerApp(tk.Tk):
 
     def _risks(self) -> None:
         page = self.pages["risks"]
-        self.risk_summary = tk.Label(page, text="0 offene Befunde",
+        self.risk_summary = tk.Label(page, text="Noch kein Scanergebnis",
                                      bg=self.c["bg"], fg=self.c["text"],
                                      font=("Segoe UI", 13, "bold"))
         self.risk_summary.pack(anchor="w", pady=(0, 12))
@@ -422,8 +422,10 @@ class ScannerApp(tk.Tk):
         if not self.result:
             return
         devices = self.result.devices
-        average = sum(d.risk_score for d in devices) / max(1, len(devices))
-        self.metrics["health"].configure(text=str(max(0, round(100 - average))))
+        summary = self.result.security_summary
+        self.metrics["health"].configure(
+            text=str(summary.get("health_score"))
+            if summary.get("assessment_available") else "Nicht bewertbar")
         self.metrics["devices"].configure(text=str(len(devices)))
         self.metrics["ports"].configure(text=str(sum(len(d.open_ports) for d in devices)))
         self.metrics["critical"].configure(
@@ -436,10 +438,12 @@ class ScannerApp(tk.Tk):
             text=f"Scan vom {self.result.finished_at[:19]} · "
                  f"{len(devices)} Geräte verfügbar.")
 
-    def _draw_chart(self, counts: dict[str, int]) -> None:
+    def _draw_chart(self, counts: dict[str, int] | None) -> None:
         self.chart.delete("all")
-        colors = (self.c["green"], "#FFD60A", self.c["orange"],
+        colors = (self.c["muted"], self.c["green"], "#FFD60A", self.c["orange"],
                   self.c["red"], self.c["critical"])
+        has_result = counts is not None
+        counts = counts or {}
         total, start = sum(counts.values()), -90.0
         if total:
             for key, color in zip(RISK_NAMES, colors):
@@ -451,9 +455,9 @@ class ScannerApp(tk.Tk):
         else:
             self.chart.create_oval(30, 18, 190, 178, fill=self.c["line"], outline="")
         self.chart.create_oval(69, 57, 151, 139, fill=self.c["card"], outline="")
-        self.chart.create_text(110, 91, text=str(total), fill=self.c["text"],
+        self.chart.create_text(110, 91, text=str(total) if has_result else "—", fill=self.c["text"],
                                font=("Segoe UI", 20, "bold"))
-        self.chart.create_text(110, 115, text="Geräte", fill=self.c["muted"])
+        self.chart.create_text(110, 115, text="Geräte" if has_result else "Kein Scan", fill=self.c["muted"])
         for child in self.legend.winfo_children():
             child.destroy()
         for key, color in zip(RISK_NAMES, colors):
@@ -477,10 +481,11 @@ class ScannerApp(tk.Tk):
             if selected_risk != "Alle Risiken" and device.risk_category != selected_risk:
                 continue
             self.device_tree.insert("", "end", iid=str(index), values=(
-                device.ip, device.hostname or "Unbekannt",
-                device.vendor or "Unbekannt",
-                ", ".join(map(str, device.open_ports)) or "Keine",
-                f"{device.risk_score} · {device.risk_category}"))
+                device.ip, device.hostname or "Nicht per Namensauflösung ermittelt",
+                device.vendor or "Nicht bestimmbar",
+                ", ".join(map(str, device.open_ports)) or "Keine geprüften Ports erreichbar",
+                (f"{device.risk_score}/100 · {device.risk_category}"
+                 if device.risk_category != "Nicht bewertet" else "Nicht bewertet")))
 
     def _device_details(self, _event: object = None) -> None:
         selection = self.device_tree.selection()
@@ -491,25 +496,28 @@ class ScannerApp(tk.Tk):
             child.destroy()
         tk.Label(self.details, text="◉", bg=self.c["card"], fg=self.c["blue"],
                  font=("Segoe UI", 28)).pack(anchor="w", padx=20, pady=(22, 5))
-        tk.Label(self.details, text=device.hostname or "Unbekanntes Gerät",
+        tk.Label(self.details, text=device.hostname or device.ip,
                  bg=self.c["card"], fg=self.c["text"],
                  font=("Segoe UI", 15, "bold"), wraplength=250,
                  justify="left").pack(anchor="w", padx=20)
         tk.Label(self.details, text=device.ip, bg=self.c["card"],
                  fg=self.c["muted"]).pack(anchor="w", padx=20, pady=(2, 14))
+        risk_text = (f" Risiko {device.risk_score}/100 · {device.risk_category} "
+                     if device.risk_category != "Nicht bewertet" else " Nicht bewertet ")
         tk.Label(self.details,
-                 text=f" Risiko {device.risk_score}/100 · {device.risk_category} ",
+                 text=risk_text,
                  bg=self._risk_color(device.risk_category), fg="white",
                  font=("Segoe UI", 9, "bold"), pady=6).pack(anchor="w", padx=20)
         self._detail("MAC & Hersteller",
                      f"{device.mac or 'Nicht ermittelt'}\n"
-                     f"{device.vendor or 'Unbekannt'}")
+                     f"{device.vendor or 'Nicht bestimmbar'}")
         self._detail("Offene Dienste",
-                     ", ".join(f"{p}/{device.services.get(p, 'tcp')}"
-                               for p in device.open_ports) or "Keine erkannt")
+                     ", ".join(f"{p}/TCP · "
+                               f"{device.services.get(p) if device.services.get(p) not in (None, 'unknown') else 'Dienst nicht identifiziert'}"
+                               for p in device.open_ports) or "Keiner der konfigurierten TCP-Ports erreichbar")
         self._detail("Sicherheitsbefunde",
                      "\n".join(f"• {f.title}" for f in device.findings[:5])
-                     or "Keine relevanten Befunde")
+                     or "Keine Befunde aus den ausgeführten Prüfungen")
 
     def _empty_details(self) -> None:
         tk.Label(self.details, text="Gerät auswählen", bg=self.c["card"],
@@ -531,7 +539,9 @@ class ScannerApp(tk.Tk):
             return
         findings = [(device, finding) for device in self.result.devices
                     for finding in device.findings]
-        self.risk_summary.configure(text=f"{len(findings)} offene Befunde")
+        self.risk_summary.configure(
+            text=f"{len(findings)} "
+                 f"{'Sicherheitsbefund' if len(findings) == 1 else 'Sicherheitsbefunde'}")
         rank = {"critical": 0, "high": 1, "medium": 2, "low": 3}
         for device, finding in sorted(
                 findings, key=lambda item: rank.get(item[1].severity, 9)):

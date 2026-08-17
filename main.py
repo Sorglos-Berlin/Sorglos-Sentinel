@@ -1,4 +1,4 @@
-"""Command line entry point for Network Sentinel."""
+"""Command line entry point for Sorglos Sentinel."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import argparse
 import logging
 import sys
 
-from network_scanner.config import Config
+from network_scanner.config import Config, load_persisted_config
 from network_scanner.engine import run_scan
 from network_scanner.history import purge_data, save_history
 from network_scanner.reporters import console_report, export_reports
@@ -55,7 +55,7 @@ def parser() -> argparse.ArgumentParser:
 
 
 def build_config(args: argparse.Namespace) -> Config:
-    config = Config.from_file(args.config) if args.config else Config()
+    config = Config.from_file(args.config) if args.config else load_persisted_config()
     values = vars(args).copy()
     values["security_audit_enabled"] = values.pop("security_audit")
     if args.ports:
