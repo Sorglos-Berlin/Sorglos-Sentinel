@@ -1,0 +1,14 @@
+subnet: "192.168.0.0/24"
+# Öffentliche Zielnetze bleiben standardmäßig gesperrt.
+allow_public_targets: false
+scan_type: "full"
+ports: [21, 22, 23, 25, 53, 80, 110, 143, 389, 443, 445, 465, 502, 636, 993, 995, 1433, 1883, 3306, 3389, 5432, 6379, 8080, 8443, 8883, 27017]
+max_concurrent: 100
+timeout: 1.0
+retries: 1
+output_dir: "./reports"
+formats: ["console", "json", "csv", "html"]
+security_audit_enabled: true
+audit_depth: "standard"
+risk_threshold: 30
+credential_testing_enabled: false

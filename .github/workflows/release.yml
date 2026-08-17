@@ -1,0 +1,90 @@
+name: Windows installer release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows-installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Determine and verify version
+        shell: pwsh
+        run: |
+          $releaseVersion = "${{ github.ref_name }}".TrimStart("v")
+          $packageVersion = python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])"
+          if ($releaseVersion -ne $packageVersion) {
+            throw "Git-Tag $releaseVersion stimmt nicht mit pyproject.toml $packageVersion überein."
+          }
+          "APP_VERSION=$releaseVersion" >> $env:GITHUB_ENV
+          "APP_COMMIT=${{ github.sha }}" >> $env:GITHUB_ENV
+
+      - name: Install build tools
+        run: python -m pip install --upgrade build twine pyinstaller pillow
+
+      - name: Install application
+        run: python -m pip install .
+
+      - name: Run tests
+        run: |
+          python -m unittest discover -s tests -v
+          node --check network_scanner/web/app.js
+
+      - name: Build Python packages
+        run: |
+          python -m build
+          python -m twine check dist/*
+
+      - name: Install NSIS
+        run: choco install nsis --no-progress -y
+
+      - name: Build Windows application and installer
+        shell: pwsh
+        run: ./installer/build-installer.ps1 -Version $env:APP_VERSION -Commit $env:APP_COMMIT
+
+      - name: Create SHA-256 checksums
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release | Out-Null
+          Copy-Item installer/output/*.exe release/
+          Copy-Item dist/*.whl, dist/*.tar.gz release/
+          Compress-Archive -Path "dist/Network Sentinel/*" -DestinationPath "release/Network-Sentinel-Portable-$env:APP_VERSION.zip"
+          $lines = Get-ChildItem release -File | Sort-Object Name | ForEach-Object {
+            $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower()
+            "$hash  $($_.Name)"
+          }
+          Set-Content -Path release/SHA256SUMS.txt -Value $lines -Encoding ascii
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Network-Sentinel-Windows-${{ github.ref_name }}
+          path: release/*
+          if-no-files-found: error
+
+      - name: Create GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = @"
+          ## Download- und Sicherheitshinweis
+
+          Der Windows-Installer dieses Releases ist noch nicht digital signiert.
+          Windows kann deshalb „Unbekannter Herausgeber“ oder eine
+          SmartScreen-Warnung anzeigen. Bitte ausschließlich die Dateien dieses
+          offiziellen GitHub-Releases verwenden, den SHA-256-Wert mit
+          ``SHA256SUMS.txt`` vergleichen und den Virenschutz nicht deaktivieren.
+          "@
+          gh release create "${{ github.ref_name }}" release/* --generate-notes --notes $notes --verify-tag

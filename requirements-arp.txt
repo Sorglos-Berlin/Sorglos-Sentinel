@@ -1,0 +1,3 @@
+# Optional Layer-2 ARP discovery. Scapy is GPL-2.0 licensed and is not bundled.
+# Install only if you want this optional integration and accept its license.
+scapy>=2.5,<3
