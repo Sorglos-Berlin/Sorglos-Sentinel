@@ -110,24 +110,39 @@
 
       <section class="page" id="risks">
         <div class="section-heading"><div><h2 id="finding-count">Noch kein Scanergebnis</h2><p id="finding-subtitle">Sicherheitsbefunde werden nach einem Scan hier angezeigt</p></div><button class="active-device-filter" id="active-device-filter" hidden><span id="active-device-filter-name"></span><i>×</i></button></div>
+        <div class="tools">
+          <label class="search">⌕ <input id="risk-search" placeholder="Befund, Gerät oder Nachweis suchen"></label>
+          <select id="risk-severity-filter" aria-label="Nach Schweregrad filtern"><option value="all">Alle Schweregrade</option><option value="critical">Kritisch</option><option value="high">Hoch</option><option value="medium">Mittel</option><option value="low">Niedrig</option><option value="info">Information</option></select>
+          <button class="clear-filters" id="clear-risk-filters" title="Alle Filter zurücksetzen">×</button>
+        </div>
         <div class="card table-card"><table><thead><tr><th>Schweregrad</th><th>Befund</th><th>Gerät</th><th>Nachweis / Aussagekraft</th><th>Empfehlung</th></tr></thead><tbody id="risks-body"></tbody></table><div class="empty" id="risks-empty">Im ausgewählten Scan wurden keine Sicherheitsbefunde ermittelt.</div></div>
       </section>
 
       <section class="page" id="statistics">
-        <div class="section-heading statistics-heading"><div><h2>Lokaler Scanverlauf</h2><p>Jeder IP-Bereich wird getrennt ausgewertet</p></div><div class="statistics-actions"><label><span>Statistik für</span><select id="statistics-subnet" aria-label="IP-Bereich für Statistik auswählen"><option value="">Aktueller IP-Bereich</option></select></label><button class="primary" id="export-statistics">Statistikbericht erstellen</button></div></div>
-        <div class="network-stat-tabs" id="network-stat-tabs" hidden></div>
-        <div class="history-metrics">
-          <article class="card"><span>Gespeicherte Scans</span><strong id="history-total">0</strong><small id="history-period">Noch kein Scan gespeichert</small></article>
-          <article class="card"><span>Aktueller Zustand</span><strong class="green" id="history-health">—</strong><small id="history-health-change">Kein Vergleich</small></article>
-          <article class="card"><span>Aktuelles Risiko</span><strong class="red" id="history-risk">—</strong><small id="history-risk-change">Kein Vergleich</small></article>
-          <article class="card"><span>Aktuelle Befunde</span><strong class="orange" id="history-findings">—</strong><small id="history-findings-change">Kein Vergleich</small></article>
+        <div id="statistics-overview">
+          <div class="section-heading statistics-heading"><div><h2>Lokaler Scanverlauf</h2><p>Jeder IP-Bereich wird getrennt ausgewertet</p></div><div class="statistics-actions"><label><span>Statistik für</span><select id="statistics-subnet" aria-label="IP-Bereich für Statistik auswählen"><option value="">Aktueller IP-Bereich</option></select></label><button class="primary" id="export-statistics">Statistikbericht erstellen</button><button class="icon-button" id="purge-history" title="Gesamten Scanverlauf unwiderruflich löschen">Verlauf löschen</button></div></div>
+          <div class="network-stat-tabs" id="network-stat-tabs" hidden></div>
+          <div class="history-metrics">
+            <article class="card"><span>Gespeicherte Scans</span><strong id="history-total">0</strong><small id="history-period">Noch kein Scan gespeichert</small></article>
+            <article class="card"><span>Aktueller Zustand</span><strong class="green" id="history-health">—</strong><small id="history-health-change">Kein Vergleich</small></article>
+            <article class="card"><span>Aktuelles Risiko</span><strong class="red" id="history-risk">—</strong><small id="history-risk-change">Kein Vergleich</small></article>
+            <article class="card"><span>Aktuelle Befunde</span><strong class="orange" id="history-findings">—</strong><small id="history-findings-change">Kein Vergleich</small></article>
+          </div>
+          <div class="history-grid">
+            <article class="card trend-card"><div class="card-heading"><div><h2>Zeitlicher Verlauf</h2><p>Zustand und Gesamtrisiko der letzten 30 Scans</p></div><div class="trend-legend"><span><i class="health-line"></i>Zustand</span><span><i class="risk-line"></i>Risiko</span></div></div><div class="trend-chart" id="trend-chart"><div class="empty-chart">Nach dem ersten Scan erscheint hier der Verlauf.</div></div></article>
+            <article class="card history-insights"><h2>Zusammenfassung</h2><div id="history-insights"><p class="muted">Noch keine historischen Daten vorhanden.</p></div></article>
+          </div>
+          <article class="card table-card history-table"><div class="table-caption"><span id="history-count">0 Scans</span><small>Klicke auf einen Scan, um alle Details zu öffnen</small></div><table><thead><tr><th>Zeitpunkt</th><th>Netzwerk</th><th>Geräte</th><th>Offene Ports</th><th>Befunde</th><th>Risiko</th><th>Zustand</th></tr></thead><tbody id="history-body"></tbody></table><div class="empty" id="history-empty">Noch keine abgeschlossenen Scans gespeichert.</div></article>
+          <div class="notice" id="statistics-export-result" hidden></div>
         </div>
-        <div class="history-grid">
-          <article class="card trend-card"><div class="card-heading"><div><h2>Zeitlicher Verlauf</h2><p>Zustand und Gesamtrisiko der letzten 30 Scans</p></div><div class="trend-legend"><span><i class="health-line"></i>Zustand</span><span><i class="risk-line"></i>Risiko</span></div></div><div class="trend-chart" id="trend-chart"><div class="empty-chart">Nach dem ersten Scan erscheint hier der Verlauf.</div></div></article>
-          <article class="card history-insights"><h2>Zusammenfassung</h2><div id="history-insights"><p class="muted">Noch keine historischen Daten vorhanden.</p></div></article>
+        <div id="statistics-scan-detail" hidden>
+          <div class="section-heading"><div><button class="icon-button" id="statistics-detail-back">← Übersicht</button><h2 id="statistics-detail-title">Scan-Detail</h2><p id="statistics-detail-subtitle"></p></div></div>
+          <div class="detail-grid" id="statistics-detail-stats"></div>
+          <div class="history-grid">
+            <article class="card table-card scan-detail-card"><h2>Geräte dieses Scans</h2><ul class="detail-list" id="statistics-detail-devices"></ul></article>
+            <article class="card table-card scan-detail-card"><h2>Sicherheitsbefunde</h2><ul class="detail-list" id="statistics-detail-findings"></ul></article>
+          </div>
         </div>
-        <article class="card table-card history-table"><div class="table-caption"><span id="history-count">0 Scans</span><small>Klicke auf einen Scan, um alle Details zu öffnen</small></div><table><thead><tr><th>Zeitpunkt</th><th>Netzwerk</th><th>Geräte</th><th>Offene Ports</th><th>Befunde</th><th>Risiko</th><th>Zustand</th></tr></thead><tbody id="history-body"></tbody></table><div class="empty" id="history-empty">Noch keine abgeschlossenen Scans gespeichert.</div></article>
-        <div class="notice" id="statistics-export-result" hidden></div>
       </section>
 
       <section class="page" id="reports">
@@ -139,6 +154,11 @@
           <button data-export="all"><strong>Alle Formate</strong><span>Komplettes Paket</span></button>
         </div>
         <div class="notice" id="export-result" hidden></div>
+        <article class="card table-card">
+          <div class="table-caption"><span id="report-list-count">0 Berichte</span><small>Bereits erstellte Berichte öffnen oder herunterladen</small></div>
+          <table><thead><tr><th>Zeitpunkt</th><th>Format</th><th>Größe</th><th>Aktionen</th></tr></thead><tbody id="report-list-body"></tbody></table>
+          <div class="empty" id="report-list-empty">Noch keine gespeicherten Berichte vorhanden.</div>
+        </article>
       </section>
 
       <section class="page" id="settings">
@@ -164,6 +184,14 @@
       <p>Bestätige, dass du dieses Netzwerk besitzt oder eine ausdrückliche Erlaubnis für den Scan hast.</p>
       <label class="consent-check"><input id="authorized" type="checkbox"> Ich bin zum Scan dieses Netzwerks berechtigt.</label>
       <div class="dialog-actions"><button value="cancel">Abbrechen</button><button class="primary" id="confirm-scan" value="default" disabled>Scan starten</button></div>
+    </form>
+  </dialog>
+  <dialog id="purge-history-dialog">
+    <form method="dialog">
+      <div class="dialog-icon">△</div><h2>Scanverlauf löschen</h2>
+      <p>Alle gespeicherten Scan-Einträge und der zeitliche Verlauf werden unwiderruflich gelöscht. Bereits exportierte Berichte (CSV/JSON/HTML) bleiben davon unberührt.</p>
+      <label class="consent-check"><input id="confirm-purge-history" type="checkbox"> Ich möchte den gesamten lokalen Scanverlauf endgültig löschen.</label>
+      <div class="dialog-actions"><button value="cancel">Abbrechen</button><button class="primary" id="confirm-purge-history-button" value="default" disabled>Verlauf löschen</button></div>
     </form>
   </dialog>
   <dialog id="detail-dialog" class="detail-dialog">

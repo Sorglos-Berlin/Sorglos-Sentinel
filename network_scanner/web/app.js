@@ -38,7 +38,8 @@ $$(".nav").forEach(button => button.addEventListener("click", () => {
   $$(".page").forEach(x => x.classList.toggle("active", x.id === button.dataset.page));
   $("#page-title").textContent = pageText[button.dataset.page][0];
   $("#page-subtitle").textContent = pageText[button.dataset.page][1];
-  if(button.dataset.page === "statistics") loadHistory();
+  if(button.dataset.page === "statistics"){showStatisticsOverview();loadHistory();}
+  if(button.dataset.page === "reports") loadReports();
 }));
 function goToPage(name) { document.querySelector(`.nav[data-page="${name}"]`)?.click(); }
 function activateByKeyboard(element, action) {
@@ -436,12 +437,22 @@ function showFindingDetail(finding){
   const compliance=device?Object.entries(device.compliance||{}).map(([name,passed])=>`<span class="compliance-chip ${passed?"pass":"fail"}">${escapeHtml(complianceLabels[name]||name)}: ${passed?"im Prüfprofil ohne Befund":"Prüfkriterium verletzt"}</span>`).join(""):"";
   openDetail(finding.title,`<div class="vulnerability-hero"><span class="severity-orb" style="--severity-color:${severityInfo[2]}">!</span><div><span class="risk-badge" style="background:${severityInfo[2]}">${escapeHtml(severityInfo[0])}</span><p>${escapeHtml(severityInfo[1])}</p></div></div><div class="detail-grid"><div class="detail-stat"><span>Betroffenes Gerät</span><strong>${escapeHtml(device?.hostname||finding.device)}</strong><small>${escapeHtml(finding.device)}</small></div><div class="detail-stat"><span>Risikobeitrag</span><strong>+${finding.points||0} Punkte</strong><small>${escapeHtml(finding.code||"Kein Regelcode übermittelt")}</small></div><div class="detail-stat"><span>Befundtyp</span><strong>${escapeHtml(labelFrom(findingTypeLabels,finding.finding_type))}</strong><small>${escapeHtml(typeText)}</small></div><div class="detail-stat"><span>Aussagekraft</span><strong>${escapeHtml(labelFrom(confidenceLabels,finding.confidence,"Nicht bewertet"))}</strong><small>${escapeHtml(confidenceText)}</small></div></div><section class="finding-section"><h3>Beschreibung</h3><p>${escapeHtml(finding.description||"Für diesen Befund wurde keine weiterführende Beschreibung übermittelt.")}</p></section><section class="finding-section evidence"><h3>Technischer Nachweis</h3><code>${escapeHtml(finding.evidence||"Die Prüfung hat keinen zusätzlichen technischen Nachweis protokolliert.")}</code></section><section class="finding-section recommendation"><h3>Empfohlene Maßnahme</h3><p>${escapeHtml(finding.recommendation||"Befund im Kontext des betroffenen Systems manuell bewerten.")}</p></section>${finding.cve?`<section class="finding-section"><h3>CVE-Referenz</h3><p>${escapeHtml(finding.cve)}</p></section>`:""}${compliance?`<section class="finding-section"><h3>Prüfkriterien des Geräts</h3><div class="compliance-list">${compliance}</div></section>`:""}`,{kicker:"SICHERHEITSBEFUND",action:device?()=>navigateToDevice(device):null,actionLabel:"Betroffenes Gerät öffnen"});
 }
-function renderRisks(devices) {
+function filteredFindings(devices){
   const rank={critical:0,high:1,medium:2,low:3,info:4};
   const filteredDevice=findingDeviceFilter?devices.find(d=>d.ip===findingDeviceFilter):null;
   if(findingDeviceFilter&&!filteredDevice)findingDeviceFilter=null;
   const sourceDevices=filteredDevice?[filteredDevice]:devices;
-  const findings=sourceDevices.flatMap(d=>d.findings.map(f=>({device:d.ip,...f}))).sort((a,b)=>(rank[a.severity]??9)-(rank[b.severity]??9));
+  const all=sourceDevices.flatMap(d=>d.findings.map(f=>({device:d.ip,deviceName:d.hostname||d.ip,...f})));
+  const q=$("#risk-search").value.toLowerCase(),severity=$("#risk-severity-filter").value;
+  const findings=all.filter(f=>{
+    const matchesQuery=!q||`${f.title} ${f.device} ${f.deviceName} ${f.evidence||""} ${f.recommendation||""}`.toLowerCase().includes(q);
+    const matchesSeverity=severity==="all"||f.severity===severity;
+    return matchesQuery&&matchesSeverity;
+  }).sort((a,b)=>(rank[a.severity]??9)-(rank[b.severity]??9));
+  return {filteredDevice,findings};
+}
+function renderRisks(devices) {
+  const {filteredDevice,findings}=filteredFindings(devices);
   $("#finding-count").textContent=filteredDevice?`${findings.length} ${findings.length===1?"Befund":"Befunde"} auf ${filteredDevice.hostname||filteredDevice.ip}`:`${findings.length} ${findings.length===1?"Sicherheitsbefund":"Sicherheitsbefunde"}`;
   $("#finding-subtitle").textContent=filteredDevice?`Nur ${filteredDevice.ip} · nach Schweregrad sortiert`:"Nach Schweregrad sortiert";
   $("#active-device-filter").hidden=!filteredDevice;
@@ -451,6 +462,9 @@ function renderRisks(devices) {
   $$("#risks-body [data-finding-index]").forEach(row=>activateByKeyboard(row,()=>showFindingDetail(findings[Number(row.dataset.findingIndex)])));
 }
 $("#active-device-filter").addEventListener("click",()=>{findingDeviceFilter=null;renderRisks(devicesData());});
+$("#risk-search").addEventListener("input",()=>state?.result&&renderRisks(devicesData()));
+$("#risk-severity-filter").addEventListener("change",()=>state?.result&&renderRisks(devicesData()));
+$("#clear-risk-filters").addEventListener("click",()=>{$("#risk-search").value="";$("#risk-severity-filter").value="all";if(state?.result)renderRisks(devicesData());});
 $("#device-search").addEventListener("input",()=>state?.result&&renderDevices(state.result.devices));
 $("#risk-filter").addEventListener("change",()=>state?.result&&renderDevices(state.result.devices));
 $("#service-filter").addEventListener("change",()=>state?.result&&renderDevices(state.result.devices));
@@ -488,19 +502,77 @@ function renderHistory(data){
   $$("#history-body [data-history-index]").forEach(row=>activateByKeyboard(row,()=>openHistoryDetail(scans[Number(row.dataset.historyIndex)])));
 }
 async function loadHistory(subnet=""){try{const requested=subnet||historySubnet||state?.config?.subnet||"";renderHistory(await api(`/api/history${requested?`?subnet=${encodeURIComponent(requested)}`:""}`));}catch(error){toast(`Historie: ${error.message}`);}}
+function showStatisticsOverview(){
+  $("#statistics-scan-detail").hidden=true;
+  $("#statistics-overview").hidden=false;
+}
+function showStatisticsDetail(){
+  $("#statistics-overview").hidden=true;
+  $("#statistics-scan-detail").hidden=false;
+}
+$("#statistics-detail-back").addEventListener("click",showStatisticsOverview);
 async function openHistoryDetail(summary){
   try{const payload=await api(`/api/history/${encodeURIComponent(summary.id)}`),result=payload.result||{},devices=result.devices||[],findings=devices.flatMap(device=>(device.findings||[]).map(finding=>({...finding,device:device.hostname||device.ip})));
     const assessed=summary.assessment_available===true;
-    openDetail(`Scan vom ${formatHistoryDate(summary.timestamp)}`,`<div class="detail-grid"><div class="detail-stat"><span>Netzwerkzustand</span><strong>${assessed?`${summary.health_score}/100`:"Nicht bewertbar"}</strong><small>${assessed?`Risiko ${summary.overall_risk}/100`:"Kein auswertbares Sicherheits-Audit"}</small></div><div class="detail-stat"><span>Erkannte Geräte</span><strong>${summary.devices}</strong><small>${summary.scanned_hosts} Ziele geprüft</small></div><div class="detail-stat"><span>Erreichbare Ports</span><strong>${summary.open_ports}</strong><small>${escapeHtml(summary.subnet)}</small></div><div class="detail-stat"><span>Sicherheitsbefunde</span><strong>${summary.findings}</strong><small>${summary.critical_findings} kritisch · ${summary.high_findings} hoch</small></div></div><section class="finding-section"><h3>Geräte dieses Scans</h3><ul class="detail-list">${devices.map(device=>`<li><span>${escapeHtml(device.hostname||device.ip)} · ${device.open_ports?.length||0} erreichbare Ports</span><strong>${device.risk_category==="Nicht bewertet"?"Nicht bewertet":`${device.risk_score}/100`}</strong></li>`).join("")||"<li>Keine Geräte erkannt</li>"}</ul></section><section class="finding-section"><h3>Sicherheitsbefunde</h3><ul class="detail-list">${findings.slice(0,20).map(finding=>`<li><span>${escapeHtml(finding.device)} · ${escapeHtml(labelFrom(severityLabels,finding.severity))}</span><strong>${escapeHtml(finding.title)}</strong></li>`).join("")||"<li>Für diesen Scan sind keine Sicherheitsbefunde gespeichert.</li>"}</ul></section>`,{kicker:"SCAN-DETAIL"});
+    $("#statistics-detail-title").textContent=`Scan vom ${formatHistoryDate(summary.timestamp)}`;
+    $("#statistics-detail-subtitle").textContent=summary.subnet||"";
+    $("#statistics-detail-stats").innerHTML=`<div class="detail-stat"><span>Netzwerkzustand</span><strong>${assessed?`${summary.health_score}/100`:"Nicht bewertbar"}</strong><small>${assessed?`Risiko ${summary.overall_risk}/100`:"Kein auswertbares Sicherheits-Audit"}</small></div><div class="detail-stat"><span>Erkannte Geräte</span><strong>${summary.devices}</strong><small>${summary.scanned_hosts} Ziele geprüft</small></div><div class="detail-stat"><span>Erreichbare Ports</span><strong>${summary.open_ports}</strong><small>${escapeHtml(summary.subnet)}</small></div><div class="detail-stat"><span>Sicherheitsbefunde</span><strong>${summary.findings}</strong><small>${summary.critical_findings} kritisch · ${summary.high_findings} hoch</small></div>`;
+    $("#statistics-detail-devices").innerHTML=devices.map(device=>`<li><span>${escapeHtml(device.hostname||device.ip)} · ${device.open_ports?.length||0} erreichbare Ports</span><strong>${device.risk_category==="Nicht bewertet"?"Nicht bewertet":`${device.risk_score}/100`}</strong></li>`).join("")||"<li>Keine Geräte erkannt</li>";
+    $("#statistics-detail-findings").innerHTML=findings.map(finding=>`<li><span>${escapeHtml(finding.device)} · ${escapeHtml(labelFrom(severityLabels,finding.severity))}</span><strong>${escapeHtml(finding.title)}</strong></li>`).join("")||"<li>Für diesen Scan sind keine Sicherheitsbefunde gespeichert.</li>";
+    showStatisticsDetail();
   }catch(error){toast(error.message);}
 }
 $("#statistics-subnet").addEventListener("change",event=>loadHistory(event.target.value));
-$("#export-statistics").addEventListener("click",async()=>{try{const value=await api("/api/history/export",{method:"POST",body:JSON.stringify({subnet:historySubnet})});$("#statistics-export-result").hidden=false;$("#statistics-export-result").textContent=`Statistikbericht für ${historySubnet} erstellt: ${value.path}`;toast("Statistikbericht erstellt");}catch(error){toast(error.message);}});
+$("#purge-history").addEventListener("click",()=>$("#purge-history-dialog").showModal());
+$("#confirm-purge-history").addEventListener("change",event=>$("#confirm-purge-history-button").disabled=!event.target.checked);
+$("#purge-history-dialog").addEventListener("close",async()=>{
+  if($("#purge-history-dialog").returnValue!=="default"||!$("#confirm-purge-history").checked)return;
+  $("#confirm-purge-history").checked=false;$("#confirm-purge-history-button").disabled=true;
+  try{
+    const value=await api("/api/history/purge",{method:"POST",body:JSON.stringify({confirm:"DELETE_HISTORY"})});
+    toast(`${value.deleted} Verlaufseintrag(e) gelöscht`);
+    loadHistory();
+  }catch(error){toast(error.message);}
+});
+$("#export-statistics").addEventListener("click",async()=>{
+  try {
+    const value=await api("/api/history/export",{method:"POST",body:JSON.stringify({subnet:historySubnet})});
+    const name=value.path.split(/[\\/]/).pop();
+    $("#statistics-export-result").hidden=false;
+    $("#statistics-export-result").innerHTML=`Statistikbericht für ${escapeHtml(historySubnet)} erstellt · ${reportLinks(name,"html")}`;
+    toast("Statistikbericht erstellt");
+    loadReports();
+  } catch(error){toast(error.message);}
+});
 $$("[data-export]").forEach(button=>button.addEventListener("click",async()=>{
   const formats=button.dataset.export==="all"?["html","json","csv"]:[button.dataset.export];
-  try { const value=await api("/api/export",{method:"POST",body:JSON.stringify({formats})}); $("#export-result").hidden=false; $("#export-result").textContent=`Erstellt: ${value.paths.join(" · ")}`; toast("Export abgeschlossen"); }
+  try { const value=await api("/api/export",{method:"POST",body:JSON.stringify({formats})}); $("#export-result").hidden=false; $("#export-result").textContent=`Erstellt: ${value.paths.join(" · ")}`; toast("Export abgeschlossen"); loadReports(); }
   catch(error){toast(error.message);}
 }));
+function formatFileSize(bytes){
+  if(!Number.isFinite(bytes))return "—";
+  if(bytes<1024)return `${bytes} B`;
+  if(bytes<1024*1024)return `${(bytes/1024).toFixed(1)} KB`;
+  return `${(bytes/1024/1024).toFixed(1)} MB`;
+}
+function reportLinks(name,format){
+  const url=`/api/reports/${encodeURIComponent(name)}`;
+  return [
+    format==="html"?`<a href="${url}" target="_blank" rel="noopener">Anzeigen</a>`:"",
+    `<a href="${url}?download=1" download="${escapeHtml(name)}">Herunterladen</a>`,
+  ].filter(Boolean).join(" · ");
+}
+function renderReportList(reports){
+  $("#report-list-count").textContent=`${reports.length} ${reports.length===1?"Bericht":"Berichte"}`;
+  $("#report-list-empty").hidden=reports.length>0;
+  $("#report-list-body").innerHTML=reports.map(r=>
+    `<tr><td>${escapeHtml(formatHistoryDate(r.modified))}</td><td>${escapeHtml(r.format.toUpperCase())}</td><td>${formatFileSize(r.size)}</td><td class="report-actions">${reportLinks(r.name,r.format)}</td></tr>`
+  ).join("");
+}
+async function loadReports(){
+  try{ renderReportList((await api("/api/reports")).reports||[]); }
+  catch(error){ toast(`Berichte: ${error.message}`); }
+}
 async function poll() {
   try { render(await api("/api/status")); } catch(error) { $("#status-title").textContent="Verbindung zum lokalen Server unterbrochen"; }
 }
