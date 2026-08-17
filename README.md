@@ -1,4 +1,8 @@
-# Network Sentinel
+# Sorglos Sentinel
+
+<p align="center">
+  <img src="network_scanner/web/assets/sorglos-sentinel-logo-dark.png" width="220" alt="Rundes Sorglos Sentinel Markenemblem">
+</p>
 
 Ein lokaler, nicht-invasiver IPv4-Netzwerk-Scanner für Windows und Python 3.10+.
 Er erkennt
@@ -18,7 +22,7 @@ autorisierten Netzen. Siehe [zulässige Nutzung](ACCEPTABLE_USE.md),
 ## Installation
 
 Für Windows steht im **Releases**-Bereich ein fertiger
-`Network-Sentinel-Setup-<Version>.exe` bereit. Python wird dafür nicht benötigt.
+`Sorglos-Sentinel-Setup-<Version>.exe` bereit. Python wird dafür nicht benötigt.
 Der Installer richtet Startmenü, optionalen Desktop-Link und Deinstallation ein.
 
 > **Hinweis zum Installer:** Die aktuelle Version ist noch nicht digital
@@ -37,7 +41,7 @@ py -3.10 -m venv .venv
 python -m pip install -r requirements.txt
 # Alternativ als lokales Paket mit Startbefehl:
 python -m pip install .
-network-sentinel
+sorglos-sentinel
 ```
 
 Scapy ist aus Lizenz- und Installationsgründen keine Pflichtabhängigkeit. Die
@@ -137,6 +141,12 @@ kein formales Audit. CVE-Updates werden nicht ungeprüft aus dem Internet gelade
 
 MIT, Copyright © 2026 Sorglos-Apps und Mitwirkende. Optionale Komponenten
 unterliegen eigenen Lizenzen; siehe [Drittanbieterhinweise](THIRD_PARTY_NOTICES.md).
+Die MIT-Lizenz räumt keine Rechte an den Marken oder Produktkennzeichen
+„Sorglos-Apps“ und „Sorglos Sentinel“ ein.
+
+Die Markenbilder und Logos unter `network_scanner/web/assets/` sind nicht unter
+MIT lizenziert. Für sie gelten die [Branding-Lizenz](BRAND_LICENSE.md) und die
+[Markenhinweise](TRADEMARKS.md). Der Quellcode bleibt davon unabhängig Open Source.
 
 ## Projekt und Support
 
@@ -147,7 +157,7 @@ unterliegen eigenen Lizenzen; siehe [Drittanbieterhinweise](THIRD_PARTY_NOTICES.
 
 ## Entwicklung unterstützen
 
-Network Sentinel bleibt freie Software ohne Telemetrie oder Cloud-Zwang. Das
+Sorglos Sentinel bleibt freie Software ohne Telemetrie oder Cloud-Zwang. Das
 Projekt kann freiwillig über Sorglos-Apps unterstützt werden:
 
 <https://buymeacoffee.com/sorglos.apps>
@@ -155,7 +165,7 @@ Projekt kann freiwillig über Sorglos-Apps unterstützt werden:
 Die im Dashboard verwendete Adresse lässt sich bei Bedarf lokal überschreiben:
 
 ```powershell
-$env:NETWORK_SENTINEL_SPONSOR_URL="https://buymeacoffee.com/sorglos.apps"
+$env:SORGLOS_SENTINEL_SPONSOR_URL="https://buymeacoffee.com/sorglos.apps"
 python main.py
 ```
 
@@ -167,7 +177,7 @@ Adressen werden nur akzeptiert, wenn sie vollständige HTTPS-Adressen sind.
 Jeder erfolgreich abgeschlossene Scan wird vollständig und ausschließlich lokal
 im konfigurierten Berichtsordner unter `history/scans/` gespeichert. Bei der
 Windows-Installation liegt dieser standardmäßig unter
-`%LOCALAPPDATA%\Sorglos-Apps\Network Sentinel\reports\`. Die Ansicht **Statistik** zeigt
+`%LOCALAPPDATA%\Sorglos-Apps\Sorglos Sentinel\reports\`. Die Ansicht **Statistik** zeigt
 Zeitverläufe, Änderungen gegenüber dem vorherigen Scan, Durchschnittswerte und
 anklickbare Scan-Details mit Geräten und Befunden.
 
@@ -184,7 +194,7 @@ werden keine Verlaufsdaten übertragen. Mit
 
 ## Sicherer Standard-Scanbereich
 
-Beim Start erkennt Network Sentinel die bevorzugte private IPv4-Adresse des
+Beim Start erkennt Sorglos Sentinel die bevorzugte private IPv4-Adresse des
 Rechners und verwendet deren `/24`-Netz als Voreinstellung. Der aktuelle Bereich
 steht im Dashboard und kann unter **Einstellungen → IPv4-Scanbereich** geändert
 werden. Ohne ausdrückliche Expertenfreigabe akzeptiert der Scanner ausschließlich

@@ -1,1 +1,1 @@
-"""Tests for Network Sentinel."""
+"""Tests for Sorglos Sentinel."""

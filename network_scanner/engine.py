@@ -10,6 +10,7 @@ from .assessment import network_assessment
 from .models import Device, ScanResult, utc_now
 from .scanners import discover, expand_targets, scan_ports
 from .security import audit_device
+from .version import get_build_info
 
 
 def run_scan(config: Config, target_values: list[str] | None = None,
@@ -20,6 +21,7 @@ def run_scan(config: Config, target_values: list[str] | None = None,
     if not config.allow_public_targets and any(not is_private_target(value) for value in targets):
         raise ValueError("Explizite Ziele außerhalb privater IPv4-Netze sind gesperrt.")
     result = ScanResult(subnet=config.subnet, started_at=utc_now(),
+                        scanner_version=get_build_info()["version"],
                         scanned_hosts=len(targets))
     try:
         if on_progress:

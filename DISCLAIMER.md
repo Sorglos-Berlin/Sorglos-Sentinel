@@ -1,6 +1,6 @@
 # Rechtlicher Hinweis und zulässige Nutzung
 
-Network Sentinel ist ein defensives Werkzeug zur Bestandsaufnahme und
+Sorglos Sentinel ist ein defensives Werkzeug zur Bestandsaufnahme und
 Sicherheitsprüfung von IPv4-Netzwerken.
 
 ## Autorisierung

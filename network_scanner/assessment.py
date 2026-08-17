@@ -15,15 +15,21 @@ def network_assessment(devices: list[Device]) -> dict[str, Any]:
     hosts and the network average. This prevents many clean hosts from masking
     one urgent device.
     """
-    if not devices:
+    assessed_devices = [device for device in devices
+                        if device.risk_category != "Nicht bewertet"]
+    if not assessed_devices:
         return {
-            "overall_risk": 0, "health_score": 100, "highest_risk": 0,
+            "overall_risk": None, "health_score": None, "highest_risk": None,
             "highest_risk_device": "", "coverage_percent": 0,
             "confidence_percent": 0, "confidence_label": "Keine Daten",
-            "device_count": 0, "open_port_count": 0, "finding_counts": {},
+            "assessment_available": False,
+            "device_count": len(devices), "assessed_device_count": 0,
+            "unassessed_device_count": len(devices),
+            "open_port_count": sum(len(item.open_ports) for item in devices),
+            "finding_counts": {},
             "inconclusive_checks": 0, "limited_checks": 0, "limitations": {},
         }
-    ordered = sorted(devices, key=lambda item: item.risk_score, reverse=True)
+    ordered = sorted(assessed_devices, key=lambda item: item.risk_score, reverse=True)
     scores = [item.risk_score for item in ordered]
     highest = scores[0]
     top_average = sum(scores[:3]) / min(3, len(scores))
@@ -33,7 +39,7 @@ def network_assessment(devices: list[Device]) -> dict[str, Any]:
     measurable = {"completed", "passed", "inconclusive"}
     applicable: list[str] = []
     limitation_statuses: list[str] = []
-    for device in devices:
+    for device in assessed_devices:
         for value in device.audit_coverage.values():
             if value in measurable:
                 applicable.append(value)
@@ -43,7 +49,7 @@ def network_assessment(devices: list[Device]) -> dict[str, Any]:
     inconclusive = sum(value == "inconclusive" for value in applicable)
     coverage = round(100 * completed / len(applicable)) if applicable else 0
 
-    findings = [item for device in devices for item in device.findings]
+    findings = [item for device in assessed_devices for item in device.findings]
     confidence_weight = {"high": 1.0, "medium": 0.6, "low": 0.3}
     confidence = round(
         100 * sum(confidence_weight.get(item.confidence, 0.5) for item in findings)
@@ -56,6 +62,7 @@ def network_assessment(devices: list[Device]) -> dict[str, Any]:
     type_counts = Counter(item.finding_type for item in findings)
     severity_counts = Counter(item.severity for item in findings)
     return {
+        "assessment_available": True,
         "overall_risk": min(100, overall),
         "health_score": max(0, 100 - overall),
         "highest_risk": highest,
@@ -64,6 +71,8 @@ def network_assessment(devices: list[Device]) -> dict[str, Any]:
         "confidence_percent": confidence,
         "confidence_label": confidence_label,
         "device_count": len(devices),
+        "assessed_device_count": len(assessed_devices),
+        "unassessed_device_count": len(devices) - len(assessed_devices),
         "open_port_count": sum(len(item.open_ports) for item in devices),
         "finding_counts": {
             "confirmed": type_counts["confirmed"],

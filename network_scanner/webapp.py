@@ -15,9 +15,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from .config import Config, detect_local_ipv4
+from .config import Config, detect_local_ipv4, save_persisted_config
 from .engine import run_scan
-from .history import history_statistics, load_scan, purge_history, save_history
+from .history import history_statistics, load_history, load_scan, purge_history, save_history
 from .models import ScanResult
 from .reporters import export_reports, export_statistics_html
 from .version import get_build_info
@@ -36,6 +36,7 @@ class AppState:
     phase: str = "idle"
     message: str = "Bereit für einen Scan"
     result: ScanResult | None = None
+    last_scan_summary: dict[str, Any] | None = None
     error: str = ""
     session_token: str = field(default_factory=lambda: secrets.token_urlsafe(32))
     sponsor_url: str = ""
@@ -53,6 +54,7 @@ class AppState:
                 "sponsor_url": self.sponsor_url,
                 "build": get_build_info(),
                 "result": self.result.to_dict() if self.result else None,
+                "last_scan_summary": self.last_scan_summary,
                 "config": {
                     "subnet": self.config.subnet,
                     "scan_type": self.config.scan_type,
@@ -84,6 +86,8 @@ def _scan(state: AppState, config: Config) -> None:
             result.errors.append(f"Scan-Historie konnte nicht gespeichert werden: {exc}")
         with state.lock:
             state.result = result
+            latest = load_history(config.output_dir, limit=1)
+            state.last_scan_summary = latest[0] if latest else None
             state.scanning = False
             state.progress = 100
             state.phase = "complete"
@@ -101,7 +105,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
     """Serve static assets and a minimal local JSON API."""
 
     state: AppState
-    server_version = "NetworkSentinel/1.0"
+    server_version = "SorglosSentinel/1.1"
 
     def log_message(self, format_string: str, *args: object) -> None:
         return
@@ -126,7 +130,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def _authorized_post(self) -> bool:
         return secrets.compare_digest(
-            self.headers.get("X-Network-Sentinel-Token", ""),
+            self.headers.get("X-Sorglos-Sentinel-Token", ""),
             self.state.session_token,
         )
 
@@ -136,7 +140,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return {}
         value = json.loads(self.rfile.read(length).decode("utf-8"))
         if not isinstance(value, dict):
-            raise ValueError("JSON object expected")
+            raise ValueError("Die Anfrage muss ein JSON-Objekt enthalten.")
         return value
 
     def do_GET(self) -> None:  # noqa: N802
@@ -158,7 +162,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                        HTTPStatus.OK if payload else HTTPStatus.NOT_FOUND)
             return
         static = {"": "index.html", "/": "index.html",
-                  "/app.js": "app.js", "/styles.css": "styles.css"}
+                  "/app.js": "app.js", "/styles.css": "styles.css",
+                  "/logo.png": "assets/sorglos-sentinel-logo-dark.png",
+                  "/logo-dark.png": "assets/sorglos-sentinel-logo-dark.png",
+                  "/logo-light.png": "assets/sorglos-sentinel-logo-light.png"}
         filename = static.get(path)
         if not filename:
             self.send_error(HTTPStatus.NOT_FOUND)
@@ -170,9 +177,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND)
             return
         content_type = {"html": "text/html", "js": "text/javascript",
-                        "css": "text/css"}[target.suffix.lstrip(".")]
+                        "css": "text/css", "png": "image/png"}[target.suffix.lstrip(".")]
         self.send_response(HTTPStatus.OK)
-        self.send_header("Content-Type", f"{content_type}; charset=utf-8")
+        charset = "; charset=utf-8" if target.suffix != ".png" else ""
+        self.send_header("Content-Type", f"{content_type}{charset}")
         self.send_header("Content-Length", str(len(payload)))
         self.send_header("Cache-Control", "no-cache")
         self.send_header("X-Frame-Options", "DENY")
@@ -194,6 +202,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
             data = self._body()
             if self.path == "/api/scan":
                 self._start_scan(data)
+            elif self.path == "/api/settings":
+                self._update_settings(data)
             elif self.path == "/api/export":
                 self._export(data)
             elif self.path == "/api/history/export":
@@ -201,7 +211,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             elif self.path == "/api/history/purge":
                 self._purge_history(data)
             else:
-                self._json({"error": "Not found"}, HTTPStatus.NOT_FOUND)
+                self._json({"error": "Der angeforderte lokale Endpunkt wurde nicht gefunden."}, HTTPStatus.NOT_FOUND)
         except (ValueError, TypeError, json.JSONDecodeError) as exc:
             self._json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
 
@@ -214,6 +224,22 @@ class DashboardHandler(BaseHTTPRequestHandler):
             if self.state.scanning:
                 self._json({"error": "Ein Scan läuft bereits."}, HTTPStatus.CONFLICT)
                 return
+        config = self._config_from_request(data)
+        save_persisted_config(config)
+        with self.state.lock:
+            # Publish the validated scan configuration before the worker starts,
+            # so every status response identifies the actually active target.
+            self.state.config = config
+            self.state.scanning = True
+            self.state.progress = 5
+            self.state.phase = "starting"
+            self.state.discovered = 0
+            self.state.error = ""
+            self.state.message = f"Scan von {config.subnet} gestartet"
+        threading.Thread(target=_scan, args=(self.state, config), daemon=True).start()
+        self._json({"ok": True}, HTTPStatus.ACCEPTED)
+
+    def _config_from_request(self, data: dict[str, Any]) -> Config:
         ports = data.get("ports", self.state.config.ports)
         if isinstance(ports, str):
             ports = [int(value.strip()) for value in ports.split(",") if value.strip()]
@@ -225,15 +251,21 @@ class DashboardHandler(BaseHTTPRequestHandler):
             "security_audit_enabled": bool(data.get("security_audit", True)),
         })
         config.validate()
+        return config
+
+    def _update_settings(self, data: dict[str, Any]) -> None:
         with self.state.lock:
-            self.state.scanning = True
-            self.state.progress = 5
-            self.state.phase = "starting"
-            self.state.discovered = 0
-            self.state.error = ""
-            self.state.message = f"Scan von {config.subnet} gestartet"
-        threading.Thread(target=_scan, args=(self.state, config), daemon=True).start()
-        self._json({"ok": True}, HTTPStatus.ACCEPTED)
+            if self.state.scanning:
+                self._json(
+                    {"error": "Einstellungen können während eines laufenden Scans nicht geändert werden."},
+                    HTTPStatus.CONFLICT,
+                )
+                return
+        config = self._config_from_request(data)
+        save_persisted_config(config)
+        with self.state.lock:
+            self.state.config = config
+        self._json({"ok": True, "message": "Einstellungen lokal gespeichert."})
 
     def _export(self, data: dict[str, Any]) -> None:
         with self.state.lock:
@@ -244,7 +276,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         formats = data.get("formats", ["html", "json", "csv"])
         if not isinstance(formats, list):
-            raise ValueError("formats must be a list")
+                raise ValueError("Die Exportformate müssen als Liste übergeben werden.")
         paths = export_reports(result, [str(value) for value in formats],
                                self.state.config.output_dir)
         self._json({"paths": [str(path.resolve()) for path in paths]})
@@ -272,17 +304,22 @@ class DashboardHandler(BaseHTTPRequestHandler):
 def launch_web(config: Config, port: int = 8765, open_browser: bool = True) -> None:
     """Start the loopback-only web dashboard."""
     sponsor_url = os.environ.get(
-        "NETWORK_SENTINEL_SPONSOR_URL", DEFAULT_SPONSOR_URL
+        "SORGLOS_SENTINEL_SPONSOR_URL", DEFAULT_SPONSOR_URL
     ).strip()
     parsed_sponsor = urlparse(sponsor_url)
     if sponsor_url and (parsed_sponsor.scheme != "https" or not parsed_sponsor.netloc):
         print("Hinweis: Sponsor-URL ignoriert; nur vollständige HTTPS-URLs sind erlaubt.")
         sponsor_url = ""
-    state = AppState(config, sponsor_url=sponsor_url)
+    latest = load_history(config.output_dir, limit=1)
+    state = AppState(
+        config,
+        sponsor_url=sponsor_url,
+        last_scan_summary=latest[0] if latest else None,
+    )
     handler = type("LocalDashboardHandler", (DashboardHandler,), {"state": state})
     server = ThreadingHTTPServer(("127.0.0.1", port), handler)
     url = f"http://127.0.0.1:{server.server_port}"
-    print(f"Network Sentinel läuft lokal unter {url}")
+    print(f"Sorglos Sentinel läuft lokal unter {url}")
     print("Beenden mit Strg+C.")
     if open_browser:
         threading.Timer(0.4, lambda: webbrowser.open(url)).start()

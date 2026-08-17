@@ -1,6 +1,6 @@
 # Drittanbieterhinweise
 
-Network Sentinel selbst wird unter der MIT-Lizenz bereitgestellt.
+Sorglos Sentinel selbst wird unter der MIT-Lizenz bereitgestellt.
 
 ## PyYAML
 
@@ -18,7 +18,7 @@ Network Sentinel selbst wird unter der MIT-Lizenz bereitgestellt.
   `requirements-arp.txt`
 - Scapy wird nicht in diesem Repository gebündelt oder verändert.
 
-Die MIT-Lizenz von Network Sentinel ändert nicht die Lizenzbedingungen von
+Die MIT-Lizenz von Sorglos Sentinel ändert nicht die Lizenzbedingungen von
 Scapy. Wer die optionale Integration installiert oder verteilt, muss die
 anwendbaren Bedingungen der GPL-2.0 selbst beachten.
 
@@ -39,7 +39,7 @@ Release-Build bestimmt.
 PyInstaller (GPL-2.0-or-later mit Bootloader-Ausnahme), Pillow (HPND) und NSIS
 (zlib/libpng) werden als Build-Werkzeuge eingesetzt. Der offizielle Installer
 verwendet ausdrücklich das zlib-Kompressionsmodul. Ihre Nutzung ändert
-nicht die MIT-Lizenz des Network-Sentinel-Quellcodes. Scapy und WeasyPrint sind
+nicht die MIT-Lizenz des Sorglos-Sentinel-Quellcodes. Scapy und WeasyPrint sind
 im offiziellen Basis-Installer nicht enthalten.
 
 ## Python und Browser

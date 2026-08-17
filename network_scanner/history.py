@@ -30,7 +30,9 @@ def _archive_dir(output_dir: str) -> Path:
 def _summary(result: dict[str, Any], scan_id: str) -> dict[str, Any]:
     devices = result.get("devices", [])
     findings = [finding for device in devices for finding in device.get("findings", [])]
-    risks = [int(device.get("risk_score", 0)) for device in devices]
+    assessed_devices = [device for device in devices
+                        if device.get("risk_category") != "Nicht bewertet"]
+    risks = [int(device.get("risk_score", 0)) for device in assessed_devices]
     security = result.get("security_summary", {})
     started = result.get("started_at", "")
     finished = result.get("finished_at", "")
@@ -39,6 +41,13 @@ def _summary(result: dict[str, Any], scan_id: str) -> dict[str, Any]:
         duration = max(0, round((datetime.fromisoformat(finished) - datetime.fromisoformat(started)).total_seconds()))
     except (TypeError, ValueError):
         pass
+    assessment_available = bool(security.get(
+        "assessment_available",
+        bool(devices) and any(device.get("risk_category") != "Nicht bewertet"
+                              for device in devices),
+    ))
+    overall_risk = security.get("overall_risk")
+    health_score = security.get("health_score")
     return {
         "id": scan_id,
         "timestamp": finished or started,
@@ -50,10 +59,14 @@ def _summary(result: dict[str, Any], scan_id: str) -> dict[str, Any]:
         "findings": len(findings),
         "critical_findings": sum(f.get("severity") == "critical" for f in findings),
         "high_findings": sum(f.get("severity") == "high" for f in findings),
-        "risky_devices": sum(int(device.get("risk_score", 0)) >= 31 for device in devices),
-        "average_risk": round(sum(risks) / len(risks), 1) if risks else 0,
-        "overall_risk": int(security.get("overall_risk", max(risks, default=0))),
-        "health_score": int(security.get("health_score", 100 - max(risks, default=0))),
+        "assessed_devices": len(assessed_devices),
+        "unassessed_devices": len(devices) - len(assessed_devices),
+        "risky_devices": sum(int(device.get("risk_score", 0)) >= 31
+                             for device in assessed_devices),
+        "average_risk": round(sum(risks) / len(risks), 1) if risks else None,
+        "assessment_available": assessment_available,
+        "overall_risk": int(overall_risk) if assessment_available and overall_risk is not None else None,
+        "health_score": int(health_score) if assessment_available and health_score is not None else None,
         "coverage_percent": int(security.get("coverage_percent", 0)),
         "confidence_label": security.get("confidence_label", "Keine Daten"),
         "errors": len(result.get("errors", [])),
@@ -110,21 +123,27 @@ def history_statistics(output_dir: str, subnet: str | None = None) -> dict[str, 
     scans = [scan for scan in all_scans if scan.get("subnet") == selected_subnet]
     network_map: dict[str, list[dict[str, Any]]] = {}
     for scan in all_scans:
-        network_map.setdefault(scan.get("subnet", "Unbekannt"), []).append(scan)
+        subnet_name = scan.get("subnet") or "Nicht zugeordnet"
+        network_map.setdefault(subnet_name, []).append(scan)
     networks = [{
         "subnet": name,
         "scan_count": len(items),
         "latest_timestamp": items[0].get("timestamp", ""),
-        "latest_health": items[0].get("health_score", 0),
-        "latest_risk": items[0].get("overall_risk", 0),
+        "latest_health": items[0].get("health_score"),
+        "latest_risk": items[0].get("overall_risk"),
     } for name, items in network_map.items()]
     chronological = list(reversed(scans))
+    assessed_scans = [scan for scan in scans if scan.get(
+        "assessment_available", scan.get("devices", 0) > 0)]
     latest = scans[0] if scans else None
     previous = scans[1] if len(scans) > 1 else None
     changes = {}
     if latest and previous:
-        for key in ("devices", "open_ports", "findings", "overall_risk", "health_score"):
+        for key in ("devices", "open_ports", "findings"):
             changes[key] = latest[key] - previous[key]
+        if latest.get("assessment_available") and previous.get("assessment_available"):
+            for key in ("overall_risk", "health_score"):
+                changes[key] = latest[key] - previous[key]
     return {
         "total_scans": len(scans),
         "selected_subnet": selected_subnet,
@@ -132,12 +151,20 @@ def history_statistics(output_dir: str, subnet: str | None = None) -> dict[str, 
         "latest": latest,
         "changes": changes,
         "averages": {
-            key: round(sum(scan[key] for scan in scans) / len(scans), 1) if scans else 0
-            for key in ("devices", "open_ports", "findings", "overall_risk", "health_score")
+            **{
+                key: round(sum(scan[key] for scan in scans) / len(scans), 1) if scans else None
+                for key in ("devices", "open_ports", "findings")
+            },
+            **{
+                key: round(sum(scan[key] for scan in assessed_scans) / len(assessed_scans), 1)
+                if assessed_scans else None
+                for key in ("overall_risk", "health_score")
+            },
         },
-        "best_health": max((scan["health_score"] for scan in scans), default=0),
-        "worst_risk": max((scan["overall_risk"] for scan in scans), default=0),
-        "trend": chronological[-30:],
+        "best_health": max((scan["health_score"] for scan in assessed_scans), default=None),
+        "worst_risk": max((scan["overall_risk"] for scan in assessed_scans), default=None),
+        "trend": [scan for scan in chronological if scan.get(
+            "assessment_available", scan.get("devices", 0) > 0)][-30:],
         "scans": scans,
     }
 

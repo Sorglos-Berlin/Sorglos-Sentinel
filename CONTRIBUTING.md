@@ -1,6 +1,6 @@
 # Mitwirken
 
-Vielen Dank für dein Interesse an Network Sentinel.
+Vielen Dank für dein Interesse an Sorglos Sentinel.
 
 ## Voraussetzungen
 

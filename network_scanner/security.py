@@ -219,7 +219,7 @@ def audit_web(device: Device, port: int) -> list[Finding]:
     try:
         connection.request("HEAD", "/", headers={
             "Host": device.hostname or device.ip,
-            "User-Agent": "NetworkSentinel/1.0 SecurityAudit",
+            "User-Agent": "SorglosSentinel/1.0 SecurityAudit",
             "Connection": "close",
         })
         response = connection.getresponse()
@@ -318,7 +318,7 @@ def audit_starttls(device: Device, port: int) -> list[Finding]:
         return []
     commands = {
         21: (b"AUTH TLS\r\n", (b"234",)),
-        25: (b"EHLO network-sentinel.local\r\n", (b"STARTTLS",)),
+        25: (b"EHLO sorglos-sentinel.local\r\n", (b"STARTTLS",)),
         110: (b"CAPA\r\n", (b"STLS",)),
         143: (b"a1 CAPABILITY\r\n", (b"STARTTLS",)),
     }

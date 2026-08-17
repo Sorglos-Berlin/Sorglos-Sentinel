@@ -4,7 +4,7 @@ Stand: 31. Juli 2026
 
 ## Lokale Verarbeitung
 
-Network Sentinel ist als lokale Anwendung konzipiert:
+Sorglos Sentinel ist als lokale Anwendung konzipiert:
 
 - Der Webserver bindet ausschließlich an `127.0.0.1`.
 - Es gibt keine Telemetrie, Nutzeranalyse oder Cloud-Synchronisierung.
@@ -31,10 +31,15 @@ entscheidet über Speicherort, Aufbewahrungsdauer, Zugriffsschutz und Löschung.
 Mit `--purge-data` können lokale Scan- und Reportdateien entfernt werden.
 
 Beim offiziellen Windows-Installer lautet der Standardordner:
-`%LOCALAPPDATA%\Sorglos-Apps\Network Sentinel\reports\`. Programmupdates und
+`%LOCALAPPDATA%\Sorglos-Apps\Sorglos Sentinel\reports\`. Programmupdates und
 Deinstallation entfernen diesen Datenordner nicht automatisch. Ein Fehlerprotokoll
-kann unter `%LOCALAPPDATA%\Sorglos-Apps\Network Sentinel\network-sentinel.log`
+kann unter `%LOCALAPPDATA%\Sorglos-Apps\Sorglos Sentinel\sorglos-sentinel.log`
 entstehen und technische Fehlermeldungen enthalten.
+
+Beim ersten Start nach der Umbenennung werden vorhandene lokale Daten aus dem
+früheren Produktordner einmalig in den neuen Ordner kopiert. Der frühere Ordner
+bleibt als lokale, manuell löschbare Sicherung erhalten; es findet dabei keine
+Netzwerkübertragung statt.
 
 Report- und Konfigurationsdateien sind über `.gitignore` vom Repository
 ausgeschlossen. Vor einer Veröffentlichung eines Forks muss trotzdem geprüft
@@ -42,7 +47,7 @@ werden, ob sensible Dateien versehentlich aufgenommen wurden.
 
 ## Verantwortung des Betreibers
 
-Wer Network Sentinel in einer Organisation einsetzt, ist für eine geeignete
+Wer Sorglos Sentinel in einer Organisation einsetzt, ist für eine geeignete
 Rechtsgrundlage, Transparenz gegenüber Betroffenen, Zugriffsrechte,
 Aufbewahrungsfristen und technische Schutzmaßnahmen verantwortlich.
 

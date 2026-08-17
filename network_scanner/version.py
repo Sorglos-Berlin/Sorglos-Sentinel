@@ -9,7 +9,7 @@ from importlib.metadata import PackageNotFoundError, version as package_version
 from pathlib import Path
 from typing import Any
 
-FALLBACK_VERSION = "1.0.0"
+FALLBACK_VERSION = "1.2.0"
 
 
 def _baked_build() -> dict[str, Any] | None:
@@ -28,8 +28,11 @@ def _baked_build() -> dict[str, Any] | None:
 
 
 def _base_version() -> str:
+    baked = _baked_build()
+    if baked:
+        return str(baked["version"])
     try:
-        return package_version("network-sentinel")
+        return package_version("sorglos-sentinel")
     except PackageNotFoundError:
         return FALLBACK_VERSION
 

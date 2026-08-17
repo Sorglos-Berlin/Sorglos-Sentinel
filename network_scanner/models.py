@@ -37,7 +37,7 @@ class Device:
     banners: dict[int, str] = field(default_factory=dict)
     findings: list[Finding] = field(default_factory=list)
     risk_score: int = 0
-    risk_category: str = "Sicher"
+    risk_category: str = "Nicht bewertet"
     compliance: dict[str, bool] = field(default_factory=dict)
     audit_coverage: dict[str, str] = field(default_factory=dict)
     audit_log: list[dict[str, Any]] = field(default_factory=list)
@@ -53,7 +53,7 @@ class ScanResult:
     subnet: str
     started_at: str
     finished_at: str = ""
-    scanner_version: str = "1.0.0"
+    scanner_version: str = ""
     scanned_hosts: int = 0
     devices: list[Device] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)

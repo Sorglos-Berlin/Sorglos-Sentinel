@@ -12,9 +12,28 @@ BUILTIN = {
 
 
 class OuiDatabase:
-    def __init__(self, path: str = "") -> None:
-        self.entries = dict(BUILTIN)
-        candidates = [Path(path)] if path else []
+    def __init__(self, path: str = "", *, include_system: bool = True) -> None:
+        """Load vendor data with deterministic precedence.
+
+        System databases extend coverage, the curated built-ins provide stable
+        canonical names, and an explicitly configured file has final priority.
+        Tests and other reproducible callers can disable host-specific data via
+        ``include_system=False``.
+        """
+        self.entries: dict[str, str] = {}
+        if include_system:
+            for candidate in self._system_candidates():
+                if candidate.is_file():
+                    self._load(candidate)
+        self.entries.update(BUILTIN)
+        if path:
+            custom_path = Path(path)
+            if custom_path.is_file():
+                self._load(custom_path)
+
+    @staticmethod
+    def _system_candidates() -> list[Path]:
+        candidates: list[Path] = []
         program_files = os.environ.get("ProgramFiles")
         if program_files:
             candidates.extend([
@@ -26,9 +45,7 @@ class OuiDatabase:
             Path("/usr/share/wireshark/manuf"),
             Path("/usr/share/ieee-data/oui.txt"),
         ])
-        for candidate in candidates:
-            if candidate.is_file():
-                self._load(candidate)
+        return candidates
 
     def _load(self, path: Path) -> None:
         for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
