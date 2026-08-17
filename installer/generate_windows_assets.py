@@ -13,7 +13,7 @@ LOGO_SOURCE = (
     / "network_scanner"
     / "web"
     / "assets"
-    / "sorglos-sentinel-logo-dark.png"
+    / "sorglos-sentinel-logo-light.png"
 )
 
 
