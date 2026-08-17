@@ -67,7 +67,7 @@ jobs:
           }
           Set-Content -Path release/SHA256SUMS.txt -Value $lines -Encoding ascii
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Sorglos-Sentinel-Windows-${{ github.ref_name }}
           path: release/*
