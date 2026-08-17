@@ -25,4 +25,3 @@ network_scanner/_build.py
 installer/assets/app.ico
 installer/generated-version.txt
 installer/output/
-codex_network_scanner_prompt.md
