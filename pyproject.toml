@@ -32,7 +32,7 @@ dependencies = ["PyYAML>=6,<7"]
 
 [project.optional-dependencies]
 arp = ["scapy>=2.5,<3"]
-pdf = ["WeasyPrint>=62,<70"]
+pdf = ["WeasyPrint>=62,<71"]
 dev = ["build>=1.2", "twine>=5", "pyinstaller>=6.10,<7", "pillow>=11,<13"]
 
 [project.scripts]
